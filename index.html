@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Inventory Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            margin: 20px;
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        .note-title {
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .collapsed {
+            display: none;
+        }
+        .folder-toggle {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>D&D Inventory Manager</h1>
+        
+        <div class="section">
+            <h2>Add Character</h2>
+            <form id="add-character-form">
+                <input type="text" id="character-name" placeholder="Character Name" required>
+                <button type="submit">Add Character</button>
+            </form>
+        </div>
+        
+        <div class="section">
+            <h2>Add Item</h2>
+            <form id="add-item-form">
+                <input type="text" id="item-name" placeholder="Item Name" required>
+                <input type="text" id="item-slot" placeholder="Item Slot (e.g., Head, Arm, Gloves)">
+                <input type="text" id="item-stat" placeholder="Stat">
+                <input type="number" id="item-value" placeholder="Value">
+                <button type="submit">Add Item</button>
+            </form>
+        </div>
+        
+        <div class="section">
+            <h2>Assign Item to Character</h2>
+            <form id="assign-item-form">
+                <select id="assign-character" required></select>
+                <select id="assign-item" required></select>
+                <button type="submit">Assign Item</button>
+            </form>
+        </div>
+
+        <div class="section">
+            <h2>Add Skill</h2>
+            <form id="add-skill-form">
+                <input type="text" id="skill-name" placeholder="Skill Name" required>
+                <input type="text" id="skill-description" placeholder="Skill Description" required>
+                <button type="submit">Add Skill</button>
+            </form>
+        </div>
+
+        <div class="section">
+            <h2>Assign Skill to Character</h2>
+            <form id="assign-skill-form">
+                <select id="assign-skill-character" required></select>
+                <select id="assign-skill" required></select>
+                <button type="submit">Assign Skill</button>
+            </form>
+        </div>
+        
+        <div class="section">
+            <h2>Character Details</h2>
+            <select id="character-details-select" required></select>
+            <div id="character-details">
+                <h3>Inventory</h3>
+                <div id="inventory-list"></div>
+                <h3>Skills</h3>
+                <div id="skills-list"></div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Best Loadout</h2>
+            <form id="best-loadout-form">
+                <select id="loadout-character" required></select>
+                <input type="text" id="loadout-stat" placeholder="Stat" required>
+                <button type="submit">Find Best Loadout</button>
+            </form>
+            <div id="best-loadout-result"></div>
+        </div>
+
+        <!-- Add Note Modal -->
+        <div id="add-note-modal" class="modal">
+            <div class="modal-content">
+                <span class="close" id="add-note-close">&times;</span>
+                <h2>Add Note</h2>
+                <form id="add-note-form">
+                    <input type="text" id="note-title" placeholder="Note Title" required>
+                    <textarea id="note-content" placeholder="Note Content" required></textarea>
+                    <button type="submit">Add Note</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Read Notes Modal -->
+        <div id="read-notes-modal" class="modal">
+            <div class="modal-content">
+                <span class="close" id="read-notes-close">&times;</span>
+                <h2>Notes</h2>
+                <div id="notes-list"></div>
+                <div id="note-details" style="display:none;">
+                    <h3 id="note-title-display"></h3>
+                    <p id="note-content-display"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
