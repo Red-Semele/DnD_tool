@@ -361,11 +361,15 @@ function generateInventoryItemHtml(item) {
 function generateSkillItemHtml(skill) {
     console.log("skill" + skill)
     return `
-    <li class="draggable-skill" draggable="true" data-skill-name="${skill.name}">
-        ${skill.name} - ${skill.description}
-        <button onclick="console.log('Clicked + button for skill:', '${skill.name.replace("'", "\\'")}'); addNoteModalHandler('skills', '${skill.name.replace("'", "\\'")}')">+</button>
-        <button onclick="console.log('Clicked Read Notes button for skill:', '${skill.name.replace("'", "\\'")}'); readNotesModalHandler('skills', '${skill.name.replace("'", "\\'")}')">Read Notes</button>
-    </li>`;
+        <li class="draggable-skill" draggable="true" data-skill-name="${skill.name}">
+            ${skill.name} - ${skill.description}
+            <button onclick="console.log('Clicked + button for skill:', '${skill.name.replace("'", "\\'")}'); addNoteModalHandler('skills', '${skill.name.replace("'", "\\'")}')">+</button>
+            <button onclick="console.log('Clicked Read Notes button for skill:', '${skill.name.replace("'", "\\'")}'); readNotesModalHandler('skills', '${skill.name.replace("'", "\\'")}')">Read Notes</button>
+            <button id="add-roll-${skill.name.replace("'", "\\'")}" onclick="console.log('Clicked Add Roll button for skill:', '${skill.name.replace("'", "\\'")}'); addRoll('${skill.name.replace("'", "\\'")}')">Add Roll</button>
+            <button id="perform-${skill.name.replace("'", "\\'")}" style="display:none;" onclick="console.log(this.id + 'Clicked Perform button for skill:', '${skill.name.replace("'", "\\'")}'); performRoll('${skill.name.replace("'", "\\'")}', '${skill.lastRoll}')">Perform</button>
+            <button id="edit-${skill.name.replace("'", "\\'")}" style="display:none;" onclick="editRoll('${skill.name.replace("'", "\\'")}')">Edit Roll</button>
+            <button onclick="readNotesModalHandler('skills', '${skill.name.replace("'", "\\'")}')">Read Notes</button>
+        </li>`;
 }
 
 function generateFolderHtml(folderName, items, type = 'items') {
@@ -506,7 +510,7 @@ function handleDropOnFolder(e) {
     if (draggedItemName && folderName) {
         if (folderType === 'items') {
             const draggedItem = items.find(item => item.name === draggedItemName);
-            const folder = folders.find(folder => folder.name === folderName && folder.type === 'items');
+            const folder = characterFolders[selectedCharacter].find(folder => folder.name === folderName && folder.type === 'items');
             folder.items.push(draggedItem);
             updateInventoryDisplay(characterDetailsSelect.value);
         } else if (folderType === 'skills') {
@@ -582,3 +586,77 @@ rollDiceForm.addEventListener('submit', (e) => {
         diceRollResult.textContent = 'Invalid dice notation. Please use format like "2d6 + 6".';
     }
 });
+
+function addRoll(skillName) {
+    const diceNotation = prompt("Enter dice notation (e.g., 2d6 + 5):");
+    if (diceNotation) {
+        const skill = skills.find(s => s.name === skillName);
+        skill.lastRoll = diceNotation;
+        console.log(skillName)
+        const escapedSkillName = skillName.replace("'", "\\'");
+        console.log(escapedSkillName)
+        document.getElementById(`perform-${escapedSkillName}`).style.display = "inline-block";
+        // Set the display style for the edit button
+        document.getElementById(`edit-${escapedSkillName}`).style.display = "inline-block";
+        document.getElementById(`add-roll-${escapedSkillName}`).style.display = "none";
+        console.log(`Dice notation added to ${skillName}: ${diceNotation}`);
+    }
+}
+
+function editRoll(skillName) {
+    const diceNotation = prompt("Enter new dice notation (e.g., 1d20 + 3):");
+    if (diceNotation) {
+        const skill = skills.find(s => s.name === skillName);
+        skill.lastRoll = diceNotation;
+        console.log(`Dice notation edited for ${skillName}: ${diceNotation}`);
+    }
+}
+
+function performRoll(skillName, diceNotation) {
+    const match = diceNotation.match(/^(\d+)d(\d+)(\s*([\+\-\*\/])\s*(\d+))?$/);
+    if (match) {
+        const numDice = parseInt(match[1]);
+        const diceType = parseInt(match[2]);
+        let modifierType = match[4];
+        let modifierValue = match[5] ? parseInt(match[5].trim()) : 0;
+
+        // Perform the roll (using existing roll dice function)
+        let total = rollDice(numDice, diceType, modifierType, modifierValue);
+
+        // Display the result
+        alert(`Performed ${numDice}d${diceType}${modifierType ? ` ${modifierType} ${modifierValue}` : ''} for ${skillName}. Result: ${total}`);
+    } else {
+        console.error('Invalid dice notation:', diceNotation);
+    }
+}
+
+function rollDice(numDice, diceType, modifierType, modifierValue) {
+    let total = 0;
+    for (let i = 0; i < numDice; i++) {
+        const roll = Math.floor(Math.random() * diceType) + 1;
+        total += roll;
+    }
+    if (modifierType) {
+        switch (modifierType) {
+            case '+':
+                total += modifierValue;
+                break;
+            case '-':
+                total -= modifierValue;
+                break;
+            case '*':
+                total *= modifierValue;
+                break;
+            case '/':
+                if (modifierValue !== 0) {
+                    total = Math.floor(total / modifierValue);
+                } else {
+                    console.error('Invalid dice notation: Division by zero.');
+                }
+                break;
+            default:
+                break;
+        }
+    }
+    return total;
+}
