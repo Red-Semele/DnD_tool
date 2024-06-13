@@ -27,6 +27,7 @@ const noteTitleDisplay = document.getElementById('note-title-display');
 const noteContentDisplay = document.getElementById('note-content-display');
 const rollDiceForm = document.getElementById('roll-dice-form');
 const diceRollResult = document.getElementById('dice-roll-result');
+let selectedCharacter = "";
 
 const characters = [];
 const items = [];
@@ -42,7 +43,8 @@ let currentNoteType = '';
 let currentNoteItem = '';
 
 // Folder data structure
-const folders = [];
+//const folders = [];
+const characterFolders = {};
 
 // Helper Functions
 function updateCharacterSelects() {
@@ -79,33 +81,47 @@ function updateSkillSelect() {
 }
 
 function updateInventoryDisplay(character) {
-    console.log("D")
+    console.log("Updating inventory display for character:", character);
     if (!character) return;
+
     let inventoryHtml = '';
+
+    // Display loose items belonging to the selected character
     inventory[character].forEach(item => {
         inventoryHtml += generateInventoryItemHtml(item);
     });
 
-    folders.filter(folder => folder.type === 'items').forEach(folder => {
-        inventoryHtml += generateFolderHtml(folder.name, folder.items);
+    // Display items from folders that belong to the selected character
+    characterFolders[character].forEach(folder => {
+        if (folder.type === 'items') {
+            inventoryHtml += generateFolderHtml(folder.name, folder.items);
+        }
     });
 
+    // Update the inventory list with the generated HTML
     inventoryList.innerHTML = inventoryHtml ? `<ul>${inventoryHtml}</ul>` : 'No items';
     attachDragAndDropHandlers();
 }
 
 function updateSkillsDisplay(character) {
-    console.log("E")
+    console.log("Updating skills display for character:", character);
     if (!character) return;
+
     let skillsHtml = '';
+
+    // Display loose skills belonging to the selected character
     characterSkills[character].forEach(skill => {
-        skillsHtml += generateSkillItemHtml(skill)
+        skillsHtml += generateSkillItemHtml(skill);
     });
 
-    folders.filter(folder => folder.type === 'skills').forEach(folder => {
-        skillsHtml += generateFolderHtml(folder.name, folder.items, 'skills');
+    // Display skills from folders that belong to the selected character
+    characterFolders[character].forEach(folder => {
+        if (folder.type === 'skills') {
+            skillsHtml += generateFolderHtml(folder.name, folder.items, 'skills');
+        }
     });
 
+    // Update the skills list with the generated HTML
     skillsList.innerHTML = skillsHtml ? `<ul>${skillsHtml}</ul>` : 'No skills';
     attachDragAndDropHandlers();
 }
@@ -122,10 +138,14 @@ addCharacterForm.addEventListener('submit', (e) => {
     console.log("G")
     e.preventDefault();
     const characterName = document.getElementById('character-name').value;
+    if (!selectedCharacter) {
+        selectedCharacter = characterName
+    }
     if (!characters.includes(characterName)) {
         characters.push(characterName);
         inventory[characterName] = [];
         characterSkills[characterName] = [];
+        characterFolders[characterName] = [];
         updateCharacterSelects();
     }
     addCharacterForm.reset();
@@ -192,12 +212,27 @@ bestLoadoutForm.addEventListener('submit', (e) => {
     const bestItems = {};
     const bestPartyItems = {};
 
-    // Find best item for the selected character per slot
-    inventory[character].forEach(item => {
-        if ((!item.slot || item.slot === '') && (!item.stat || item.stat === '')) return; // Skip items without slot and stat
-        if (!bestItems[item.slot]) bestItems[item.slot] = item;
-        else if (item.value > bestItems[item.slot].value) bestItems[item.slot] = item;
+    // Function to find the best item considering items in inventory and in folders
+    function findBestItem(itemsArray) {
+        const bestItem = {};
+
+        itemsArray.forEach(item => {
+            if ((!item.slot || item.slot === '') && (!item.stat || item.stat === '')) return; // Skip items without slot and stat
+            if (!bestItem[item.slot]) bestItem[item.slot] = item;
+            else if (item.value > bestItem[item.slot].value) bestItem[item.slot] = item;
+        });
+
+        return bestItem;
+    }
+
+    // Include items from inventory and folders for the selected character
+    const allItems = [...inventory[character]];
+    characterFolders[selectedCharacter].filter(folder => folder.type === 'items').forEach(folder => {
+        allItems.push(...folder.items);
     });
+
+    // Find best item for the selected character per slot
+    bestItems = findBestItem(allItems);
 
     // Find best item in the entire party inventory per slot
     for (const char in inventory) {
@@ -206,6 +241,13 @@ bestLoadoutForm.addEventListener('submit', (e) => {
             if (!bestPartyItems[item.slot]) bestPartyItems[item.slot] = item;
             else if (item.value > bestPartyItems[item.slot].value) bestPartyItems[item.slot] = item;
         });
+
+        // Also include items from characterFolders[selectedCharacter] of other characters in the party
+        if (char !== character) {
+            characterFolders[selectedCharacter].filter(folder => folder.type === 'items').forEach(folder => {
+                bestPartyItems[folder.name] = findBestItem(folder.items)[folder.name];
+            });
+        }
     }
 
     let bestItemsHtml = '<h3>Best Items for ' + character + ' (' + stat + '):</h3>';
@@ -215,7 +257,9 @@ bestLoadoutForm.addEventListener('submit', (e) => {
 
     let bestPartyItemsHtml = '<h3>Best Party Items for ' + character + ' (' + stat + '):</h3>';
     for (const slot in bestPartyItems) {
-        bestPartyItemsHtml += `<p>${slot}: ${bestPartyItems[slot].name} (Value: ${bestPartyItems[slot].value})</p>`;
+        if (bestPartyItems[slot]) {
+            bestPartyItemsHtml += `<p>${slot}: ${bestPartyItems[slot].name} (Value: ${bestPartyItems[slot].value})</p>`;
+        }
     }
 
     // Display the results
@@ -327,7 +371,7 @@ function generateSkillItemHtml(skill) {
 function generateFolderHtml(folderName, items, type = 'items') {
     console.log("O")
     return `
-        <li class="folder" data-folder-name="${folderName}" data-folder-type="${type}">
+        <li class="folder" data-folder-name="${folderName}" data-folder-type="${type}" data-character="${selectedCharacter}">
             <span class="folder-toggle" onclick="toggleFolderContents('${folderName}', '${type}')">${folderName}</span>
             <ul class="folder-contents collapsed">
                 ${items.map(item => type === 'items' ? generateInventoryItemHtml(item) : generateSkillItemHtml(item)).join('')}
@@ -336,15 +380,18 @@ function generateFolderHtml(folderName, items, type = 'items') {
 }
 
 function toggleFolderContents(folderName, type) {
-    console.log("P")
+    const selectedCharacter = characterDetailsSelect.value;
     const folderContents = document.querySelector(`.folder[data-folder-name="${folderName}"][data-folder-type="${type}"] .folder-contents`);
     folderContents.classList.toggle('collapsed');
 }
 
 function createFolder(folderName, itemsToAdd, type) {
-    console.log("Q")
-    folders.push({ name: folderName, items: itemsToAdd, type });
     const selectedCharacter = characterDetailsSelect.value;
+    if (!characterFolders[selectedCharacter]) {
+        characterFolders[selectedCharacter] = [];
+    }
+    characterFolders[selectedCharacter].push({ name: folderName, items: itemsToAdd, type });
+
     itemsToAdd.forEach(item => {
         if (type === 'items') {
             const index = inventory[selectedCharacter].findIndex(existingItem => existingItem.name === item.name);
