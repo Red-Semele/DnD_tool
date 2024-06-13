@@ -184,7 +184,7 @@ addSkillForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const skillName = document.getElementById('skill-name').value;
     const skillDescription = document.getElementById('skill-description').value;
-    const skill = { name: skillName, description: skillDescription };
+    const skill = { name: skillName, description: skillDescription, lastRoll: null};
     skills.push(skill);
     notes.skills[skillName] = [];
     updateSkillSelect();
@@ -593,6 +593,7 @@ function addRoll(skillName) {
         const skill = skills.find(s => s.name === skillName);
         skill.lastRoll = diceNotation;
         console.log(skillName)
+        console.log(skill.lastRoll)
         const escapedSkillName = skillName.replace("'", "\\'");
         console.log(escapedSkillName)
         document.getElementById(`perform-${escapedSkillName}`).style.display = "inline-block";
@@ -613,6 +614,7 @@ function editRoll(skillName) {
 }
 
 function performRoll(skillName, diceNotation) {
+    console.log(diceNotation)
     const match = diceNotation.match(/^(\d+)d(\d+)(\s*([\+\-\*\/])\s*(\d+))?$/);
     if (match) {
         const numDice = parseInt(match[1]);
