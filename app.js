@@ -46,6 +46,7 @@ const folders = [];
 
 // Helper Functions
 function updateCharacterSelects() {
+    console.log("A")
     const characterOptions = characters.map(character => `<option value="${character}">${character}</option>`).join('');
     assignCharacterSelect.innerHTML = characterOptions;
     loadoutCharacterSelect.innerHTML = characterOptions;
@@ -54,16 +55,31 @@ function updateCharacterSelects() {
 }
 
 function updateItemSelect() {
-    const itemOptions = items.map(item => `<option value="${item.name}">${item.name}</option>`).join('');
-    assignItemSelect.innerHTML = itemOptions;
+    const selectElement = document.getElementById('assign-item');
+    selectElement.textContent = ''; // Clear existing options
+
+    items.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.name;
+        option.textContent = item.name;
+        selectElement.appendChild(option);
+    });
 }
 
 function updateSkillSelect() {
-    const skillOptions = skills.map(skill => `<option value="${skill.name}">${skill.name}</option>`).join('');
-    assignSkillSelect.innerHTML = skillOptions;
+    const selectElement = document.getElementById('assign-skill');
+    selectElement.textContent = ''; // Clear existing options
+
+    skills.forEach(skill => {
+        const option = document.createElement('option');
+        option.value = skill.name;
+        option.textContent = skill.name;
+        selectElement.appendChild(option);
+    });
 }
 
 function updateInventoryDisplay(character) {
+    console.log("D")
     if (!character) return;
     let inventoryHtml = '';
     inventory[character].forEach(item => {
@@ -79,15 +95,11 @@ function updateInventoryDisplay(character) {
 }
 
 function updateSkillsDisplay(character) {
+    console.log("E")
     if (!character) return;
     let skillsHtml = '';
     characterSkills[character].forEach(skill => {
-        skillsHtml += `
-            <li class="draggable-skill" draggable="true" data-skill-name="${skill.name}">
-                ${skill.name} - ${skill.description}
-                <button onclick="addNoteModalHandler('skills', '${skill.name}')">+</button>
-                <button onclick="readNotesModalHandler('skills', '${skill.name}')">Read Notes</button>
-            </li>`;
+        skillsHtml += generateSkillItemHtml(skill)
     });
 
     folders.filter(folder => folder.type === 'skills').forEach(folder => {
@@ -99,6 +111,7 @@ function updateSkillsDisplay(character) {
 }
 
 function updateCharacterDetails() {
+    console.log("F")
     const selectedCharacter = characterDetailsSelect.value;
     updateInventoryDisplay(selectedCharacter);
     updateSkillsDisplay(selectedCharacter);
@@ -106,6 +119,7 @@ function updateCharacterDetails() {
 
 // Event Listeners
 addCharacterForm.addEventListener('submit', (e) => {
+    console.log("G")
     e.preventDefault();
     const characterName = document.getElementById('character-name').value;
     if (!characters.includes(characterName)) {
@@ -118,6 +132,7 @@ addCharacterForm.addEventListener('submit', (e) => {
 });
 
 addItemForm.addEventListener('submit', (e) => {
+    console.log("H")
     e.preventDefault();
     const itemName = document.getElementById('item-name').value;
     const itemSlot = document.getElementById('item-slot').value.trim();
@@ -133,6 +148,7 @@ addItemForm.addEventListener('submit', (e) => {
 });
 
 assignItemForm.addEventListener('submit', (e) => {
+    console.log("I")
     e.preventDefault();
     const character = assignCharacterSelect.value;
     const itemName = assignItemSelect.value;
@@ -144,6 +160,7 @@ assignItemForm.addEventListener('submit', (e) => {
 });
 
 addSkillForm.addEventListener('submit', (e) => {
+    console.log("J")
     e.preventDefault();
     const skillName = document.getElementById('skill-name').value;
     const skillDescription = document.getElementById('skill-description').value;
@@ -155,6 +172,7 @@ addSkillForm.addEventListener('submit', (e) => {
 });
 
 assignSkillForm.addEventListener('submit', (e) => {
+    console.log("K")
     e.preventDefault();
     const character = assignSkillCharacterSelect.value;
     const skillName = assignSkillSelect.value;
@@ -166,6 +184,7 @@ assignSkillForm.addEventListener('submit', (e) => {
 });
 
 bestLoadoutForm.addEventListener('submit', (e) => {
+    console.log("L")
     e.preventDefault();
     const character = loadoutCharacterSelect.value;
     const stat = document.getElementById('loadout-stat').value;
@@ -204,6 +223,7 @@ bestLoadoutForm.addEventListener('submit', (e) => {
 });
 
 addNoteForm.addEventListener('submit', (e) => {
+    console.log("M")
     e.preventDefault();
     const noteTitle = document.getElementById('note-title').value;
     const noteContent = document.getElementById('note-content').value;
@@ -250,14 +270,21 @@ window.onclick = (event) => {
 characterDetailsSelect.addEventListener('change', updateCharacterDetails);
 
 function addNoteModalHandler(type, item) {
+    console.log('Adding note modal handler called.');
     currentNoteType = type;
     currentNoteItem = item;
+    console.log('Current note type:', currentNoteType);
+    console.log('Current note item:', currentNoteItem);
     addNoteModal.style.display = "block";
+    
 }
 
 function readNotesModalHandler(type, item) {
+    console.log('Reading notes modal handler called.');
     currentNoteType = type;
     currentNoteItem = item;
+    console.log('Current note type:', currentNoteType);
+    console.log('Current note item:', currentNoteItem);
     const itemNotes = notes[type][item] || [];
     
     // Prepare HTML for displaying notes
@@ -269,6 +296,7 @@ function readNotesModalHandler(type, item) {
 }
 
 function showNoteDetails(index) {
+    console.log("M")
     const itemNotes = notes[currentNoteType][currentNoteItem] || [];
     const note = itemNotes[index];
     noteTitleDisplay.innerHTML = note.title;
@@ -277,24 +305,27 @@ function showNoteDetails(index) {
 }
 
 function generateInventoryItemHtml(item) {
+    console.log("N")
     return `
         <li class="draggable" draggable="true" data-item-name="${item.name}">
-            ${item.name} (Slot: ${item.slot ? item.slot : 'No Slot'}, Stat: ${item.stat ? item.stat : 'No Stat'}, Value: ${item.value})
-            <button onclick="addNoteModalHandler('items', '${item.name}')">+</button>
-            <button onclick="readNotesModalHandler('items', '${item.name}')">Read Notes</button>
+            ${item.name.replace("'", "\\'")} (Slot: ${item.slot ? item.slot : 'No Slot'}, Stat: ${item.stat ? item.stat : 'No Stat'}, Value: ${item.value})
+            <button onclick="addNoteModalHandler('items', '${item.name.replace("'", "\\'")}')">+</button>
+            <button onclick="readNotesModalHandler('items', '${item.name.replace("'", "\\'")}')">Read Notes</button>
         </li>`;
 }
 
 function generateSkillItemHtml(skill) {
+    console.log("skill" + skill)
     return `
-        <li class="draggable-skill" draggable="true" data-skill-name="${skill.name}">
-            ${skill.name} - ${skill.description}
-            <button onclick="addNoteModalHandler('skills', '${skill.name}')">+</button>
-            <button onclick="readNotesModalHandler('skills', '${skill.name}')">Read Notes</button>
-        </li>`;
+    <li class="draggable-skill" draggable="true" data-skill-name="${skill.name}">
+        ${skill.name} - ${skill.description}
+        <button onclick="console.log('Clicked + button for skill:', '${skill.name.replace("'", "\\'")}'); addNoteModalHandler('skills', '${skill.name.replace("'", "\\'")}')">+</button>
+        <button onclick="console.log('Clicked Read Notes button for skill:', '${skill.name.replace("'", "\\'")}'); readNotesModalHandler('skills', '${skill.name.replace("'", "\\'")}')">Read Notes</button>
+    </li>`;
 }
 
 function generateFolderHtml(folderName, items, type = 'items') {
+    console.log("O")
     return `
         <li class="folder" data-folder-name="${folderName}" data-folder-type="${type}">
             <span class="folder-toggle" onclick="toggleFolderContents('${folderName}', '${type}')">${folderName}</span>
@@ -305,11 +336,13 @@ function generateFolderHtml(folderName, items, type = 'items') {
 }
 
 function toggleFolderContents(folderName, type) {
+    console.log("P")
     const folderContents = document.querySelector(`.folder[data-folder-name="${folderName}"][data-folder-type="${type}"] .folder-contents`);
     folderContents.classList.toggle('collapsed');
 }
 
 function createFolder(folderName, itemsToAdd, type) {
+    console.log("Q")
     folders.push({ name: folderName, items: itemsToAdd, type });
     const selectedCharacter = characterDetailsSelect.value;
     itemsToAdd.forEach(item => {
@@ -334,6 +367,7 @@ function createFolder(folderName, itemsToAdd, type) {
 }
 
 function promptForFolderName(callback) {
+    console.log("S")
     const folderName = prompt("Enter a name for the new folder:");
     if (folderName) {
         callback(folderName);
@@ -342,6 +376,7 @@ function promptForFolderName(callback) {
 
 // Drag and Drop Functions
 function attachDragAndDropHandlers() {
+    console.log("T")
     const draggables = document.querySelectorAll('.draggable');
     const skillDraggables = document.querySelectorAll('.draggable-skill');
     const folders = document.querySelectorAll('.folder');
