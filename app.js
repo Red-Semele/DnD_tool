@@ -25,6 +25,8 @@ const notesList = document.getElementById('notes-list');
 const noteDetails = document.getElementById('note-details');
 const noteTitleDisplay = document.getElementById('note-title-display');
 const noteContentDisplay = document.getElementById('note-content-display');
+const rollDiceForm = document.getElementById('roll-dice-form');
+const diceRollResult = document.getElementById('dice-roll-result');
 
 const characters = [];
 const items = [];
@@ -42,191 +44,210 @@ let currentNoteItem = '';
 // Folder data structure
 const folders = [];
 
+// Helper Functions
+function updateCharacterSelects() {
+    const characterOptions = characters.map(character => `<option value="${character}">${character}</option>`).join('');
+    assignCharacterSelect.innerHTML = characterOptions;
+    loadoutCharacterSelect.innerHTML = characterOptions;
+    assignSkillCharacterSelect.innerHTML = characterOptions;
+    characterDetailsSelect.innerHTML = characterOptions;
+}
 
-    // Helper Functions
-    function updateCharacterSelects() {
-        const characterOptions = characters.map(character => `<option value="${character}">${character}</option>`).join('');
-        assignCharacterSelect.innerHTML = characterOptions;
-        loadoutCharacterSelect.innerHTML = characterOptions;
-        assignSkillCharacterSelect.innerHTML = characterOptions;
-        characterDetailsSelect.innerHTML = characterOptions;
-    }
+function updateItemSelect() {
+    const itemOptions = items.map(item => `<option value="${item.name}">${item.name}</option>`).join('');
+    assignItemSelect.innerHTML = itemOptions;
+}
 
-    function updateItemSelect() {
-        const itemOptions = items.map(item => `<option value="${item.name}">${item.name}</option>`).join('');
-        assignItemSelect.innerHTML = itemOptions;
-    }
+function updateSkillSelect() {
+    const skillOptions = skills.map(skill => `<option value="${skill.name}">${skill.name}</option>`).join('');
+    assignSkillSelect.innerHTML = skillOptions;
+}
 
-    function updateSkillSelect() {
-        const skillOptions = skills.map(skill => `<option value="${skill.name}">${skill.name}</option>`).join('');
-        assignSkillSelect.innerHTML = skillOptions;
-    }
-
-    function updateInventoryDisplay(character) {
-        if (!character) return;
-        let inventoryHtml = '';
-        inventory[character].forEach(item => {
-            inventoryHtml += generateInventoryItemHtml(item);
-        });
-
-        folders.forEach(folder => {
-            inventoryHtml += generateFolderHtml(folder.name, folder.items);
-        });
-
-        inventoryList.innerHTML = inventoryHtml ? `<ul>${inventoryHtml}</ul>` : 'No items';
-        attachDragAndDropHandlers();
-    }
-
-    function updateSkillsDisplay(character) {
-        if (!character) return;
-        let skillsHtml = '';
-        characterSkills[character].forEach(skill => {
-            skillsHtml += `
-                <li>
-                    ${skill.name} - ${skill.description}
-                    <button onclick="addNoteModalHandler('skills', '${skill.name}')">+</button>
-                    <button onclick="readNotesModalHandler('skills', '${skill.name}')">Read Notes</button>
-                </li>`;
-        });
-        skillsList.innerHTML = skillsHtml ? `<ul>${skillsHtml}</ul>` : 'No skills';
-    }
-
-    function updateCharacterDetails() {
-        const selectedCharacter = characterDetailsSelect.value;
-        updateInventoryDisplay(selectedCharacter);
-        updateSkillsDisplay(selectedCharacter);
-    }
-
-    // Event Listeners
-    addCharacterForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const characterName = document.getElementById('character-name').value;
-        if (!characters.includes(characterName)) {
-            characters.push(characterName);
-            inventory[characterName] = [];
-            characterSkills[characterName] = [];
-            updateCharacterSelects();
-        }
-        addCharacterForm.reset();
+function updateInventoryDisplay(character) {
+    if (!character) return;
+    let inventoryHtml = '';
+    inventory[character].forEach(item => {
+        inventoryHtml += generateInventoryItemHtml(item);
     });
 
-    addItemForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const itemName = document.getElementById('item-name').value;
-        const itemSlot = document.getElementById('item-slot').value.trim();
-        const itemStat = document.getElementById('item-stat').value.trim();
-        const itemValue = parseInt(document.getElementById('item-value').value, 10);
-        const item = { name: itemName, slot: itemSlot, stat: itemStat, value: itemValue };
-        if (itemSlot === '') item.slot = null;
-        if (itemStat === '') item.stat = null;
-        items.push(item);
-        notes.items[itemName] = [];
-        updateItemSelect();
-        addItemForm.reset();
+    folders.filter(folder => folder.type === 'items').forEach(folder => {
+        inventoryHtml += generateFolderHtml(folder.name, folder.items);
     });
 
-    assignItemForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const character = assignCharacterSelect.value;
-        const itemName = assignItemSelect.value;
-        const item = items.find(i => i.name === itemName);
-        inventory[character].push(item);
-        if (characterDetailsSelect.value === character) {
-            updateInventoryDisplay(character);
-        }
+    inventoryList.innerHTML = inventoryHtml ? `<ul>${inventoryHtml}</ul>` : 'No items';
+    attachDragAndDropHandlers();
+}
+
+function updateSkillsDisplay(character) {
+    if (!character) return;
+    let skillsHtml = '';
+    characterSkills[character].forEach(skill => {
+        skillsHtml += `
+            <li class="draggable-skill" draggable="true" data-skill-name="${skill.name}">
+                ${skill.name} - ${skill.description}
+                <button onclick="addNoteModalHandler('skills', '${skill.name}')">+</button>
+                <button onclick="readNotesModalHandler('skills', '${skill.name}')">Read Notes</button>
+            </li>`;
     });
 
-    addSkillForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const skillName = document.getElementById('skill-name').value;
-        const skillDescription = document.getElementById('skill-description').value;
-        const skill = { name: skillName, description: skillDescription };
-        skills.push(skill);
-        notes.skills[skillName] = [];
-        updateSkillSelect();
-        addSkillForm.reset();
+    folders.filter(folder => folder.type === 'skills').forEach(folder => {
+        skillsHtml += generateFolderHtml(folder.name, folder.items, 'skills');
     });
 
-    assignSkillForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const character = assignSkillCharacterSelect.value;
-        const skillName = assignSkillSelect.value;
-        const skill = skills.find(s => s.name === skillName);
-        characterSkills[character].push(skill);
-        if (characterDetailsSelect.value === character) {
-            updateSkillsDisplay(character);
-        }
+    skillsList.innerHTML = skillsHtml ? `<ul>${skillsHtml}</ul>` : 'No skills';
+    attachDragAndDropHandlers();
+}
+
+function updateCharacterDetails() {
+    const selectedCharacter = characterDetailsSelect.value;
+    updateInventoryDisplay(selectedCharacter);
+    updateSkillsDisplay(selectedCharacter);
+}
+
+// Event Listeners
+addCharacterForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const characterName = document.getElementById('character-name').value;
+    if (!characters.includes(characterName)) {
+        characters.push(characterName);
+        inventory[characterName] = [];
+        characterSkills[characterName] = [];
+        updateCharacterSelects();
+    }
+    addCharacterForm.reset();
+});
+
+addItemForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const itemName = document.getElementById('item-name').value;
+    const itemSlot = document.getElementById('item-slot').value.trim();
+    const itemStat = document.getElementById('item-stat').value.trim();
+    const itemValue = parseInt(document.getElementById('item-value').value, 10);
+    const item = { name: itemName, slot: itemSlot, stat: itemStat, value: itemValue };
+    if (itemSlot === '') item.slot = null;
+    if (itemStat === '') item.stat = null;
+    items.push(item);
+    notes.items[itemName] = [];
+    updateItemSelect();
+    addItemForm.reset();
+});
+
+assignItemForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const character = assignCharacterSelect.value;
+    const itemName = assignItemSelect.value;
+    const item = items.find(i => i.name === itemName);
+    inventory[character].push(item);
+    if (characterDetailsSelect.value === character) {
+        updateInventoryDisplay(character);
+    }
+});
+
+addSkillForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const skillName = document.getElementById('skill-name').value;
+    const skillDescription = document.getElementById('skill-description').value;
+    const skill = { name: skillName, description: skillDescription };
+    skills.push(skill);
+    notes.skills[skillName] = [];
+    updateSkillSelect();
+    addSkillForm.reset();
+});
+
+assignSkillForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const character = assignSkillCharacterSelect.value;
+    const skillName = assignSkillSelect.value;
+    const skill = skills.find(s => s.name === skillName);
+    characterSkills[character].push(skill);
+    if (characterDetailsSelect.value === character) {
+        updateSkillsDisplay(character);
+    }
+});
+
+bestLoadoutForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const character = loadoutCharacterSelect.value;
+    const stat = document.getElementById('loadout-stat').value;
+
+    const bestItems = {};
+    const bestPartyItems = {};
+
+    // Find best item for the selected character per slot
+    inventory[character].forEach(item => {
+        if ((!item.slot || item.slot === '') && (!item.stat || item.stat === '')) return; // Skip items without slot and stat
+        if (!bestItems[item.slot]) bestItems[item.slot] = item;
+        else if (item.value > bestItems[item.slot].value) bestItems[item.slot] = item;
     });
 
-    bestLoadoutForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const character = loadoutCharacterSelect.value;
-        const stat = document.getElementById('loadout-stat').value;
-
-        const bestItems = {};
-        const bestPartyItems = {};
-
-        // Find best item for the selected character per slot
-        inventory[character].forEach(item => {
+    // Find best item in the entire party inventory per slot
+    for (const char in inventory) {
+        inventory[char].forEach(item => {
             if ((!item.slot || item.slot === '') && (!item.stat || item.stat === '')) return; // Skip items without slot and stat
-            if (!bestItems[item.slot]) bestItems[item.slot] = item;
-            else if (item.value > bestItems[item.slot].value) bestItems[item.slot] = item;
+            if (!bestPartyItems[item.slot]) bestPartyItems[item.slot] = item;
+            else if (item.value > bestPartyItems[item.slot].value) bestPartyItems[item.slot] = item;
         });
+    }
 
-        // Find best item in the entire party inventory per slot
-        for (const char in inventory) {
-            inventory[char].forEach(item => {
-                if ((!item.slot || item.slot === '') && (!item.stat || item.stat === '')) return; // Skip items without slot and stat
-                if (!bestPartyItems[item.slot]) bestPartyItems[item.slot] = item;
-                else if (item.value > bestPartyItems[item.slot].value) bestPartyItems[item.slot] = item;
-            });
-        }
+    let bestItemsHtml = '<h3>Best Items for ' + character + ' (' + stat + '):</h3>';
+    for (const slot in bestItems) {
+        bestItemsHtml += `<p>${slot}: ${bestItems[slot].name} (Value: ${bestItems[slot].value})</p>`;
+    }
 
-        let bestItemsHtml = '<h3>Best Items for ' + character + ' (' + stat + '):</h3>';
-        for (const slot in bestItems) {
-            bestItemsHtml += `<p>${slot}: ${bestItems[slot].name} (Value: ${bestItems[slot].value})</p>`;
-        }
+    let bestPartyItemsHtml = '<h3>Best Party Items for ' + character + ' (' + stat + '):</h3>';
+    for (const slot in bestPartyItems) {
+        bestPartyItemsHtml += `<p>${slot}: ${bestPartyItems[slot].name} (Value: ${bestPartyItems[slot].value})</p>`;
+    }
 
-        let bestPartyItemsHtml = '<h3>Best Party Items for ' + character + ' (' + stat + '):</h3>';
-        for (const slot in bestPartyItems) {
-            bestPartyItemsHtml += `<p>${slot}: ${bestPartyItems[slot].name} (Value: ${bestPartyItems[slot].value})</p>`;
-        }
+    // Display the results
+    bestLoadoutResult.innerHTML = bestItemsHtml + bestPartyItemsHtml;
+});
 
-        // Display the results
-        bestLoadoutResult.innerHTML = bestItemsHtml + bestPartyItemsHtml;
-    });
-
-    addNoteForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const noteTitle = document.getElementById('note-title').value;
-        const noteContent = document.getElementById('note-content').value;
+addNoteForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const noteTitle = document.getElementById('note-title').value;
+    const noteContent = document.getElementById('note-content').value;
+    
+    // Ensure currentNoteType and currentNoteItem are set correctly
+    if (currentNoteType && currentNoteItem) {
         if (!notes[currentNoteType][currentNoteItem]) {
             notes[currentNoteType][currentNoteItem] = [];
         }
         notes[currentNoteType][currentNoteItem].push({ title: noteTitle, content: noteContent });
+        
+        // Update UI to reflect the newly added note
+        if (currentNoteType === 'items') {
+            updateInventoryDisplay(characterDetailsSelect.value);
+        } else if (currentNoteType === 'skills') {
+            updateSkillsDisplay(characterDetailsSelect.value);
+        }
+        
+        // Reset the form and hide the modal
         addNoteForm.reset();
         addNoteModal.style.display = "none";
-    });
+    } else {
+        console.error('Error adding note: Current note type or item not set.');
+    }
+});
 
-    addNoteClose.onclick = () => {
+addNoteClose.onclick = () => {
+    addNoteModal.style.display = "none";
+}
+
+readNotesClose.onclick = () => {
+    readNotesModal.style.display = "none";
+}
+
+window.onclick = (event) => {
+    if (event.target == addNoteModal) {
         addNoteModal.style.display = "none";
     }
-
-    readNotesClose.onclick = () => {
+    if (event.target == readNotesModal) {
         readNotesModal.style.display = "none";
     }
+}
 
-    window.onclick = (event) => {
-        if (event.target == addNoteModal) {
-            addNoteModal.style.display = "none";
-        }
-        if (event.target == readNotesModal) {
-            readNotesModal.style.display = "none";
-        }
-    }
-
-    characterDetailsSelect.addEventListener('change', updateCharacterDetails);
-
+characterDetailsSelect.addEventListener('change', updateCharacterDetails);
 
 function addNoteModalHandler(type, item) {
     currentNoteType = type;
@@ -238,8 +259,12 @@ function readNotesModalHandler(type, item) {
     currentNoteType = type;
     currentNoteItem = item;
     const itemNotes = notes[type][item] || [];
+    
+    // Prepare HTML for displaying notes
     notesList.innerHTML = itemNotes.map((note, index) => `<p class="note-title" onclick="showNoteDetails(${index})">${note.title}</p>`).join('');
-    noteDetails.style.display = "none";
+    
+    // Show the read notes modal
+    noteDetails.style.display = "none"; // Ensure details are initially hidden
     readNotesModal.style.display = "block";
 }
 
@@ -260,34 +285,53 @@ function generateInventoryItemHtml(item) {
         </li>`;
 }
 
-function generateFolderHtml(folderName, items) {
+function generateSkillItemHtml(skill) {
     return `
-        <li class="folder" data-folder-name="${folderName}">
-            <span class="folder-toggle" onclick="toggleFolderContents('${folderName}')">${folderName}</span>
+        <li class="draggable-skill" draggable="true" data-skill-name="${skill.name}">
+            ${skill.name} - ${skill.description}
+            <button onclick="addNoteModalHandler('skills', '${skill.name}')">+</button>
+            <button onclick="readNotesModalHandler('skills', '${skill.name}')">Read Notes</button>
+        </li>`;
+}
+
+function generateFolderHtml(folderName, items, type = 'items') {
+    return `
+        <li class="folder" data-folder-name="${folderName}" data-folder-type="${type}">
+            <span class="folder-toggle" onclick="toggleFolderContents('${folderName}', '${type}')">${folderName}</span>
             <ul class="folder-contents collapsed">
-                ${items.map(item => generateInventoryItemHtml(item)).join('')}
+                ${items.map(item => type === 'items' ? generateInventoryItemHtml(item) : generateSkillItemHtml(item)).join('')}
             </ul>
         </li>`;
 }
 
-function toggleFolderContents(folderName) {
-    const folderContents = document.querySelector(`.folder[data-folder-name="${folderName}"] .folder-contents`);
+function toggleFolderContents(folderName, type) {
+    const folderContents = document.querySelector(`.folder[data-folder-name="${folderName}"][data-folder-type="${type}"] .folder-contents`);
     folderContents.classList.toggle('collapsed');
 }
 
-function createFolder(folderName, itemsToAdd) {
-    folders.push({ name: folderName, items: itemsToAdd });
+function createFolder(folderName, itemsToAdd, type) {
+    folders.push({ name: folderName, items: itemsToAdd, type });
     const selectedCharacter = characterDetailsSelect.value;
     itemsToAdd.forEach(item => {
-        const index = inventory[selectedCharacter].findIndex(existingItem => existingItem.name === item.name);
-        if (index !== -1) {
-            inventory[selectedCharacter].splice(index, 1);
+        if (type === 'items') {
+            const index = inventory[selectedCharacter].findIndex(existingItem => existingItem.name === item.name);
+            if (index !== -1) {
+                inventory[selectedCharacter].splice(index, 1);
+            }
+        } else if (type === 'skills') {
+            const index = characterSkills[selectedCharacter].findIndex(existingSkill => existingSkill.name === item.name);
+            if (index !== -1) {
+                characterSkills[selectedCharacter].splice(index, 1);
+            }
         }
     });
 
-    updateInventoryDisplay(selectedCharacter);
+    if (type === 'items') {
+        updateInventoryDisplay(selectedCharacter);
+    } else if (type === 'skills') {
+        updateSkillsDisplay(selectedCharacter);
+    }
 }
-
 
 function promptForFolderName(callback) {
     const folderName = prompt("Enter a name for the new folder:");
@@ -299,12 +343,19 @@ function promptForFolderName(callback) {
 // Drag and Drop Functions
 function attachDragAndDropHandlers() {
     const draggables = document.querySelectorAll('.draggable');
+    const skillDraggables = document.querySelectorAll('.draggable-skill');
     const folders = document.querySelectorAll('.folder');
 
     draggables.forEach(draggable => {
         draggable.addEventListener('dragstart', handleDragStart);
         draggable.addEventListener('dragover', handleDragOver);
         draggable.addEventListener('drop', handleDrop);
+    });
+
+    skillDraggables.forEach(draggable => {
+        draggable.addEventListener('dragstart', handleDragStartSkill);
+        draggable.addEventListener('dragover', handleDragOver);
+        draggable.addEventListener('drop', handleDropSkill);
     });
 
     folders.forEach(folder => {
@@ -317,6 +368,10 @@ function handleDragStart(e) {
     e.dataTransfer.setData('text/plain', e.target.getAttribute('data-item-name'));
 }
 
+function handleDragStartSkill(e) {
+    e.dataTransfer.setData('text/plain', e.target.getAttribute('data-skill-name'));
+}
+
 function handleDragOver(e) {
     e.preventDefault();
 }
@@ -326,19 +381,38 @@ function handleDrop(e) {
     const draggedItemName = e.dataTransfer.getData('text/plain');
     const targetItemName = e.target.getAttribute('data-item-name');
     if (draggedItemName && targetItemName) {
-        const folderName = prompt("Enter a name for the new folder:");
-        if (folderName) {
+        promptForFolderName(folderName => {
             const draggedItemIndex = items.findIndex(item => item.name === draggedItemName);
             if (draggedItemIndex !== -1) {
                 const targetItemIndex = items.findIndex(item => item.name === targetItemName);
                 if (targetItemIndex !== -1) {
-                    createFolder(folderName, [items[draggedItemIndex], items[targetItemIndex]]);
+                    createFolder(folderName, [items[draggedItemIndex], items[targetItemIndex]], 'items');
                     // Remove the dragged item from the original items array
                     items.splice(draggedItemIndex, 1);
                     updateItemSelect(); // Update the select dropdown without the removed item
                 }
             }
-        }
+        });
+    }
+}
+
+function handleDropSkill(e) {
+    e.preventDefault();
+    const draggedSkillName = e.dataTransfer.getData('text/plain');
+    const targetSkillName = e.target.getAttribute('data-skill-name');
+    if (draggedSkillName && targetSkillName) {
+        promptForFolderName(folderName => {
+            const draggedSkillIndex = skills.findIndex(skill => skill.name === draggedSkillName);
+            if (draggedSkillIndex !== -1) {
+                const targetSkillIndex = skills.findIndex(skill => skill.name === targetSkillName);
+                if (targetSkillIndex !== -1) {
+                    createFolder(folderName, [skills[draggedSkillIndex], skills[targetSkillIndex]], 'skills');
+                    // Remove the dragged skill from the original skills array
+                    skills.splice(draggedSkillIndex, 1);
+                    updateSkillSelect(); // Update the select dropdown without the removed skill
+                }
+            }
+        });
     }
 }
 
@@ -346,18 +420,83 @@ function handleDropOnFolder(e) {
     e.preventDefault();
     const draggedItemName = e.dataTransfer.getData('text/plain');
     const folderName = e.target.closest('.folder').getAttribute('data-folder-name');
+    const folderType = e.target.closest('.folder').getAttribute('data-folder-type');
     if (draggedItemName && folderName) {
-        const draggedItem = items.find(item => item.name === draggedItemName);
-        const folder = folders.find(folder => folder.name === folderName);
-        folder.items.push(draggedItem);
-        updateInventoryDisplay(characterDetailsSelect.value);
+        if (folderType === 'items') {
+            const draggedItem = items.find(item => item.name === draggedItemName);
+            const folder = folders.find(folder => folder.name === folderName && folder.type === 'items');
+            folder.items.push(draggedItem);
+            updateInventoryDisplay(characterDetailsSelect.value);
+        } else if (folderType === 'skills') {
+            const draggedSkill = skills.find(skill => skill.name === draggedItemName);
+            const folder = folders.find(folder => folder.name === folderName && folder.type === 'skills');
+            folder.items.push(draggedSkill);
+            updateSkillsDisplay(characterDetailsSelect.value);
+        }
     }
 }
 
-// Example of how to create a folder
-function exampleFolderCreation() {
-    createFolder('Example Folder', [
-        { name: 'Item 1', slot: 'Head', stat: 'Strength', value: 10 },
-        { name: 'Item 2', slot: 'Body', stat: 'Defense', value: 20 }
-    ]);
-}
+rollDiceForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const diceInput = document.getElementById('dice-input').value.trim();
+
+    // Revised regex to match dice notation allowing for spaces
+    const diceRegex = /^(\d+)d(\d+)(\s*([\+\-\*\/])\s*(\d+))?$/;
+    const match = diceInput.match(diceRegex);
+
+    if (match) {
+        const numDice = parseInt(match[1]);
+        const diceType = parseInt(match[2]);
+        let modifierType = match[4]; // Operator (+, -, *, /)
+        let modifierValue = match[5] ? parseInt(match[5].trim()) : 0; // Modifier value
+
+        // Roll the dice
+        let diceRolls = [];
+        let total = 0; // Initialize total to 0
+        for (let i = 0; i < numDice; i++) {
+            const roll = Math.floor(Math.random() * diceType) + 1;
+            diceRolls.push(roll);
+            total += roll;
+        }
+
+        // Prepare the result message without modifier
+        let resultMessage = `Rolled ${numDice}d${diceType} and got ${total} (${diceRolls.join(', ')})`;
+        
+        // Update UI with result without modifier
+        diceRollResult.textContent = resultMessage;
+
+        // If modifier exists, apply it
+        if (modifierType) {
+            switch (modifierType) {
+                case '+':
+                    total += modifierValue;
+                    break;
+                case '-':
+                    total -= modifierValue;
+                    break;
+                case '*':
+                    total *= modifierValue;
+                    break;
+                case '/':
+                    if (modifierValue !== 0) {
+                        total = Math.floor(total / modifierValue);
+                    } else {
+                        diceRollResult.textContent = 'Invalid dice notation. Division by zero.';
+                        return;
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            // Prepare the result message with modifier
+            resultMessage += ` (${modifierType}${modifierValue}) => Total: ${total}`;
+            
+            // Update UI with result including modifier
+            diceRollResult.textContent = resultMessage;
+            
+        }
+    } else {
+        diceRollResult.textContent = 'Invalid dice notation. Please use format like "2d6 + 6".';
+    }
+});
