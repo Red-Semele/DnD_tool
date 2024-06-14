@@ -7,11 +7,35 @@
     <style>
         body {
             font-family: Arial, sans-serif;
+            display: flex;
+        }
+        .sidebar {
+            width: 200px;
+            background-color: #333;
+            color: white;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            padding-top: 20px;
+        }
+        .sidebar a {
+            padding: 15px;
+            text-decoration: none;
+            font-size: 18px;
+            color: white;
+            display: block;
+        }
+        .sidebar a:hover {
+            background-color: #575757;
         }
         .container {
-            margin: 20px;
+            margin-left: 220px;
+            padding: 20px;
+            flex-grow: 1;
         }
         .section {
+            display: none;
             margin-bottom: 20px;
         }
         .note-title {
@@ -50,20 +74,23 @@
             text-decoration: none;
             cursor: pointer;
         }
-
-        .collapsed {
-            display: none;
-        }
-        .folder-toggle {
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
+    <div class="sidebar">
+        <a href="#" data-target="characterAdd">Add Character</a>
+        <a href="#" data-target="itemAdd">Add Item</a>
+        <a href="#" data-target="characterItemAssign">Assign Item to Character</a>
+        <a href="#" data-target="skillAdd">Add Skill</a>
+        <a href="#" data-target="characterSkillAssign">Assign Skill to Character</a>
+        <a href="#" data-target="characterInfo">Character Details</a>
+        <a href="#" data-target="characterLoadout">Best Loadout</a>
+        <a href="#" data-target="diceRoller">Roll dice</a>
+    </div>
     <div class="container">
         <h1>D&D Inventory Manager</h1>
         
-        <div class="section">
+        <div class="section" id="characterAdd">
             <h2>Add Character</h2>
             <form id="add-character-form">
                 <input type="text" id="character-name" placeholder="Character Name" required>
@@ -71,7 +98,7 @@
             </form>
         </div>
         
-        <div class="section">
+        <div class="section" id="itemAdd">
             <h2>Add Item</h2>
             <form id="add-item-form">
                 <input type="text" id="item-name" placeholder="Item Name" required>
@@ -82,7 +109,7 @@
             </form>
         </div>
         
-        <div class="section">
+        <div class="section" id="characterItemAssign">
             <h2>Assign Item to Character</h2>
             <form id="assign-item-form">
                 <select id="assign-character" required></select>
@@ -91,7 +118,7 @@
             </form>
         </div>
 
-        <div class="section">
+        <div class="section" id="skillAdd">
             <h2>Add Skill</h2>
             <form id="add-skill-form">
                 <input type="text" id="skill-name" placeholder="Skill Name" required>
@@ -100,7 +127,7 @@
             </form>
         </div>
 
-        <div class="section">
+        <div class="section" id="characterSkillAssign">
             <h2>Assign Skill to Character</h2>
             <form id="assign-skill-form">
                 <select id="assign-skill-character" required></select>
@@ -109,7 +136,7 @@
             </form>
         </div>
         
-        <div class="section">
+        <div class="section" id="characterInfo">
             <h2>Character Details</h2>
             <select id="character-details-select" required></select>
             <div id="character-details">
@@ -120,7 +147,7 @@
             </div>
         </div>
         
-        <div class="section">
+        <div class="section" id="characterLoadout">
             <h2>Best Loadout</h2>
             <form id="best-loadout-form">
                 <select id="loadout-character" required></select>
@@ -155,11 +182,13 @@
                 </div>
             </div>
         </div>
-        <form id="roll-dice-form">
-            <input type="text" id="dice-input" placeholder="Enter dice notation (2d6 +6)">
-            <button type="submit">Roll Dice</button>
-        </form>
-        <div id="dice-roll-result"></div>
+        <div class ="section" id="diceRoller">
+            <form id="roll-dice-form">
+                <input type="text" id="dice-input" placeholder="Enter dice notation (2d6 +6)">
+                <button type="submit">Roll Dice</button>
+            </form>
+            <div id="dice-roll-result"></div>
+        </div>
     </div>
 
     <script src="app.js"></script>

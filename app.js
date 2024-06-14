@@ -666,3 +666,29 @@ function rollDice(numDice, diceType, modifierType, modifierValue) {
     }
     return total;
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const links = document.querySelectorAll('.sidebar a');
+    const sections = document.querySelectorAll('.section');
+
+    links.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = link.getAttribute('data-target');
+
+            sections.forEach(section => {
+                section.style.display = 'none';
+            });
+
+            const targetSection = document.getElementById(targetId);
+            if (targetSection) {
+                targetSection.style.display = 'block';
+            }
+        });
+    });
+
+    // Show the first section by default
+    if (sections.length > 0) {
+        sections[0].style.display = 'block';
+    }
+});
