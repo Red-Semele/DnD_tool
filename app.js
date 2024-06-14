@@ -592,6 +592,7 @@ function addRoll(skillName) {
     if (diceNotation) {
         const skill = skills.find(s => s.name === skillName);
         skill.lastRoll = diceNotation;
+        console.log(skills)
         console.log(skillName)
         console.log(skill.lastRoll)
         const escapedSkillName = skillName.replace("'", "\\'");
@@ -613,7 +614,10 @@ function editRoll(skillName) {
     }
 }
 
-function performRoll(skillName, diceNotation) {
+function performRoll(skillName) {
+    const skill = skills.find(skill => skill.name === skillName);
+    const diceNotation = skill.lastRoll;
+    console.log(diceNotation);
     console.log(diceNotation)
     const match = diceNotation.match(/^(\d+)d(\d+)(\s*([\+\-\*\/])\s*(\d+))?$/);
     if (match) {
