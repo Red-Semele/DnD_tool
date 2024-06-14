@@ -46,7 +46,88 @@ let currentNoteItem = '';
 //const folders = [];
 const characterFolders = {};
 
+
+document.addEventListener('DOMContentLoaded', loadGameState);
 // Helper Functions
+function saveGameState() {
+    const gameState = {
+        characters,
+        items,
+        skills,
+        inventory,
+        characterSkills,
+        notes,
+        characterFolders,
+        selectedCharacter
+    };
+    localStorage.setItem('gameState', JSON.stringify(gameState));
+    console.log("Save-attempted")
+    console.log(gameState)
+}
+
+function loadGameState() {
+    console.log("Attempting to load game state");
+    const savedState = localStorage.getItem('gameState');
+    if (savedState) {
+        const gameState = JSON.parse(savedState);
+        
+        // Helper function to deep clone an object or array
+        function deepClone(source) {
+            return JSON.parse(JSON.stringify(source));
+        }
+
+        // Update function to handle different types of data
+        function updateData(target, source) {
+            // Handle arrays
+            if (Array.isArray(target)) {
+                target.splice(0, target.length, ...source);
+            }
+            // Handle objects
+            else if (typeof target === 'object' && target !== null) {
+                // Clear existing keys
+                Object.keys(target).forEach(key => delete target[key]);
+                // Assign new keys
+                Object.assign(target, source);
+            }
+            // Handle primitive types (do nothing)
+        }
+
+        // Loop through gameState properties and update corresponding variables
+        for (let prop in gameState) {
+            if (gameState.hasOwnProperty(prop)) {
+                switch (prop) {
+                    case 'characters':
+                    case 'items':
+                    case 'skills':
+                    case 'inventory':
+                    case 'characterSkills':
+                    case 'characterFolders':
+                    case 'notes':
+                        updateData(eval(prop), deepClone(gameState[prop]));
+                        break;
+                    case 'selectedCharacter':
+                        selectedCharacter = gameState[prop];
+                        break;
+                    default:
+                        // Handle additional properties if needed
+                        break;
+                }
+            }
+        }
+
+        // Update UI or perform additional actions as needed
+        updateCharacterSelects();
+        updateItemSelect();
+        updateSkillSelect();
+        if (selectedCharacter) {
+            updateCharacterDetails();
+        }
+
+        console.log("Game state loaded successfully");
+    } else {
+        console.log("No saved game state found");
+    }
+}
 function updateCharacterSelects() {
     console.log("A")
     const characterOptions = characters.map(character => `<option value="${character}">${character}</option>`).join('');
@@ -149,6 +230,7 @@ addCharacterForm.addEventListener('submit', (e) => {
         updateCharacterSelects();
     }
     addCharacterForm.reset();
+    saveGameState();
 });
 
 addItemForm.addEventListener('submit', (e) => {
@@ -165,6 +247,7 @@ addItemForm.addEventListener('submit', (e) => {
     notes.items[itemName] = [];
     updateItemSelect();
     addItemForm.reset();
+    saveGameState();
 });
 
 assignItemForm.addEventListener('submit', (e) => {
@@ -174,9 +257,11 @@ assignItemForm.addEventListener('submit', (e) => {
     const itemName = assignItemSelect.value;
     const item = items.find(i => i.name === itemName);
     inventory[character].push(item);
+    
     if (characterDetailsSelect.value === character) {
         updateInventoryDisplay(character);
     }
+    saveGameState();
 });
 
 addSkillForm.addEventListener('submit', (e) => {
@@ -189,6 +274,7 @@ addSkillForm.addEventListener('submit', (e) => {
     notes.skills[skillName] = [];
     updateSkillSelect();
     addSkillForm.reset();
+    saveGameState();
 });
 
 assignSkillForm.addEventListener('submit', (e) => {
@@ -201,6 +287,7 @@ assignSkillForm.addEventListener('submit', (e) => {
     if (characterDetailsSelect.value === character) {
         updateSkillsDisplay(character);
     }
+    saveGameState();
 });
 
 bestLoadoutForm.addEventListener('submit', (e) => {
@@ -288,6 +375,7 @@ addNoteForm.addEventListener('submit', (e) => {
         
         // Reset the form and hide the modal
         addNoteForm.reset();
+        saveGameState();
         addNoteModal.style.display = "none";
     } else {
         console.error('Error adding note: Current note type or item not set.');
@@ -320,6 +408,7 @@ function addNoteModalHandler(type, item) {
     console.log('Current note type:', currentNoteType);
     console.log('Current note item:', currentNoteItem);
     addNoteModal.style.display = "block";
+    saveGameState();
     
 }
 
@@ -602,6 +691,7 @@ function addRoll(skillName) {
         document.getElementById(`edit-${escapedSkillName}`).style.display = "inline-block";
         document.getElementById(`add-roll-${escapedSkillName}`).style.display = "none";
         console.log(`Dice notation added to ${skillName}: ${diceNotation}`);
+        saveGameState();
     }
 }
 
@@ -611,6 +701,7 @@ function editRoll(skillName) {
         const skill = skills.find(s => s.name === skillName);
         skill.lastRoll = diceNotation;
         console.log(`Dice notation edited for ${skillName}: ${diceNotation}`);
+        saveGameState();
     }
 }
 
