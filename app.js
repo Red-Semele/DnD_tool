@@ -234,16 +234,31 @@ addCharacterForm.addEventListener('submit', (e) => {
 });
 
 addItemForm.addEventListener('submit', (e) => {
-    console.log("H")
+    console.log("H");
     e.preventDefault();
     const itemName = document.getElementById('item-name').value;
     const itemSlot = document.getElementById('item-slot').value.trim();
     const itemStat = document.getElementById('item-stat').value.trim();
-    const itemValue = parseInt(document.getElementById('item-value').value, 10);
-    const item = { name: itemName, slot: itemSlot, stat: itemStat, value: itemValue };
+    const itemValue = document.getElementById('item-value').value.trim();
+    
+    // Check for backslashes in stats and values
+    const stats = itemStat.split('/');
+    const values = itemValue.split('/').map(v => parseInt(v, 10));
+    console.log(stats)
+    console.log(values)
+
+    // Create an array of stat objects
+    const statArray = stats.map((stat, index) => ({
+        stat: stat.trim(),
+        value: values[index] || 0
+    }));
+
+    const item = { name: itemName, slot: itemSlot, stats: statArray };
     if (itemSlot === '') item.slot = null;
-    if (itemStat === '') item.stat = null;
+    if (itemStat === '') item.stats = [];
+
     items.push(item);
+    console.log(items)
     notes.items[itemName] = [];
     updateItemSelect();
     addItemForm.reset();
@@ -438,10 +453,13 @@ function showNoteDetails(index) {
 }
 
 function generateInventoryItemHtml(item) {
-    console.log("N")
+    console.log("N");
+    console.log(item.stats)
+    console.log(Array.isArray(item.stats)); // Verify if it's an array
+    const statHtml = item.stats.map(s => `${s.stat}: ${s.value}`).join(', ');
     return `
         <li class="draggable" draggable="true" data-item-name="${item.name}">
-            ${item.name.replace("'", "\\'")} (Slot: ${item.slot ? item.slot : 'No Slot'}, Stat: ${item.stat ? item.stat : 'No Stat'}, Value: ${item.value})
+            ${item.name.replace("'", "\\'")} (Slot: ${item.slot ? item.slot : 'No Slot'}, Stats: ${statHtml})
             <button onclick="addNoteModalHandler('items', '${item.name.replace("'", "\\'")}')">+</button>
             <button onclick="readNotesModalHandler('items', '${item.name.replace("'", "\\'")}')">Read Notes</button>
         </li>`;
