@@ -90,6 +90,10 @@
         <a href="#" data-target="characterItemAssign">Assign Item to Character</a>
         <a href="#" data-target="skillAdd">Add Skill</a>
         <a href="#" data-target="characterSkillAssign">Assign Skill to Character</a>
+        <a href="#" data-target="titleAdd">Add Title</a>
+        <a href="#" data-target="characterTitleAssign">Assign Title to Character</a>
+        <a href="#" data-target="achievementAdd">Add Achievement</a>
+        <a href="#" data-target="characterAchievementAssign">Assign Achievement to Character</a>
         <a href="#" data-target="characterInfo">Character Details</a>
         <a href="#" data-target="characterLoadout">Best Loadout</a>
         <a href="#" data-target="diceRoller">Roll dice</a>
@@ -143,6 +147,42 @@
                 <button type="submit">Assign Skill</button>
             </form>
         </div>
+
+        <div class="section" id="titleAdd">
+            <h2>Add Title</h2>
+            <form id="add-title-form">
+                <input type="text" id="title-name" placeholder="Title Name" required>
+                <input type="text" id="title-description" placeholder="Title Description" required>
+                <button type="submit">Add Title</button>
+            </form>
+        </div>
+
+        <div class="section" id="characterTitleAssign">
+            <h2>Assign Title to Character</h2>
+            <form id="assign-title-form">
+                <select id="assign-title-character" required></select>
+                <select id="assign-title" required></select>
+                <button type="submit">Assign Title</button>
+            </form>
+        </div>
+
+        <div class="section" id="achievementAdd">
+            <h2>Add Achievement</h2>
+            <form id="add-achievement-form">
+                <input type="text" id="achievement-name" placeholder="Achievement Name" required>
+                <input type="text" id="achievement-description" placeholder="Achievement Description" required>
+                <button type="submit">Add Achievement</button>
+            </form>
+        </div>
+
+        <div class="section" id="characterAchievementAssign">
+            <h2>Assign Achievement to Character</h2>
+            <form id="assign-achievement-form">
+                <select id="assign-achievement-character" required></select>
+                <select id="assign-achievement" required></select>
+                <button type="submit">Assign Achievement</button>
+            </form>
+        </div>
         
         <div class="section" id="characterInfo">
             <h2>Character Details</h2>
@@ -152,6 +192,10 @@
                 <div id="inventory-list"></div>
                 <h3>Skills</h3>
                 <div id="skills-list"></div>
+                <h3>Titles</h3>
+                <div id="title-list"></div>
+                <h3>Achievements</h3>
+                <div id="achievement-list"></div>
             </div>
         </div>
         

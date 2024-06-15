@@ -15,6 +15,8 @@ const assignSkillSelect = document.getElementById('assign-skill');
 const characterDetailsSelect = document.getElementById('character-details-select');
 const inventoryList = document.getElementById('inventory-list');
 const skillsList = document.getElementById('skills-list');
+const achievementsList = document.getElementById('achievement-list');
+const titlesList = document.getElementById('title-list');
 const bestLoadoutResult = document.getElementById('best-loadout-result');
 
 const addNoteModal = document.getElementById('add-note-modal');
@@ -29,6 +31,21 @@ const rollDiceForm = document.getElementById('roll-dice-form');
 const diceRollResult = document.getElementById('dice-roll-result');
 let selectedCharacter = "";
 
+
+const addTitleForm = document.getElementById('add-title-form');
+const assignTitleForm = document.getElementById('assign-title-form');
+const assignTitleCharacterSelect = document.getElementById('assign-title-character');
+const assignTitleSelect = document.getElementById('assign-title');
+
+const addAchievementForm = document.getElementById('add-achievement-form');
+const assignAchievementForm = document.getElementById('assign-achievement-form');
+const assignAchievementCharacterSelect = document.getElementById('assign-achievement-character');
+const assignAchievementSelect = document.getElementById('assign-achievement');
+
+const titles = []; // Array to store titles
+const achievements = []; // Array to store achievements
+const characterTitles = {}; // Object to map characters to their titles
+const characterAchievements = {}; // Object to map characters to their achievements
 const characters = [];
 const items = [];
 const skills = [];
@@ -36,7 +53,9 @@ const inventory = {};
 const characterSkills = {};
 const notes = {
     items: {},
-    skills: {}
+    skills: {},
+    titles: {}, // Object to store notes for titles
+    achievements: {} // Object to store notes for achievements
 };
 
 let currentNoteType = '';
@@ -56,6 +75,10 @@ function saveGameState() {
         skills,
         inventory,
         characterSkills,
+        titles, 
+        characterTitles,
+        achievements,
+        characterAchievements,
         notes,
         characterFolders,
         selectedCharacter
@@ -102,6 +125,10 @@ function loadGameState() {
                     case 'inventory':
                     case 'characterSkills':
                     case 'characterFolders':
+                    case 'achievements':
+                    case 'characterAchievements':
+                    case 'characterTitles':
+                    case 'titles':
                     case 'notes':
                         updateData(eval(prop), deepClone(gameState[prop]));
                         break;
@@ -119,6 +146,8 @@ function loadGameState() {
         updateCharacterSelects();
         updateItemSelect();
         updateSkillSelect();
+        updateAchievementSelect();
+        updateTitleSelect();
         if (selectedCharacter) {
             updateCharacterDetails();
         }
@@ -135,6 +164,12 @@ function updateCharacterSelects() {
     loadoutCharacterSelect.innerHTML = characterOptions;
     assignSkillCharacterSelect.innerHTML = characterOptions;
     characterDetailsSelect.innerHTML = characterOptions;
+    assignAchievementCharacterSelect.innerHTML = characterOptions;
+    assignTitleCharacterSelect.innerHTML = characterOptions;
+    console.log("Test1")
+    console.log(assignAchievementCharacterSelect)
+    console.log(assignTitleCharacterSelect)
+
 }
 
 function updateItemSelect() {
@@ -181,7 +216,8 @@ function updateInventoryDisplay(character) {
 
     // Update the inventory list with the generated HTML
     inventoryList.innerHTML = inventoryHtml ? `<ul>${inventoryHtml}</ul>` : 'No items';
-    attachDragAndDropHandlers();
+    console.log("AttachingDragAndDropHandlers2")
+    //attachDragAndDropHandlers(); TODO: Removing this fixed the issue of having three popups for itemnamingprompts.
 }
 
 function updateSkillsDisplay(character) {
@@ -204,7 +240,8 @@ function updateSkillsDisplay(character) {
 
     // Update the skills list with the generated HTML
     skillsList.innerHTML = skillsHtml ? `<ul>${skillsHtml}</ul>` : 'No skills';
-    attachDragAndDropHandlers();
+    console.log("AttachingDragAndDropHandlers1")
+    
 }
 
 function updateCharacterDetails() {
@@ -212,6 +249,9 @@ function updateCharacterDetails() {
     const selectedCharacter = characterDetailsSelect.value;
     updateInventoryDisplay(selectedCharacter);
     updateSkillsDisplay(selectedCharacter);
+    updateTitlesDisplay(selectedCharacter) 
+    updateAchievementsDisplay(selectedCharacter)
+    attachDragAndDropHandlers();
 }
 
 // Event Listeners
@@ -227,6 +267,8 @@ addCharacterForm.addEventListener('submit', (e) => {
         inventory[characterName] = [];
         characterSkills[characterName] = [];
         characterFolders[characterName] = [];
+        characterAchievements[characterName] = [];
+        characterTitles[characterName] = [];
         updateCharacterSelects();
     }
     addCharacterForm.reset();
@@ -306,6 +348,155 @@ assignSkillForm.addEventListener('submit', (e) => {
     }
     saveGameState();
 });
+
+function updateTitleSelect() {
+    const selectElement = document.getElementById('assign-title');
+    selectElement.textContent = ''; // Clear existing options
+
+    titles.forEach(title => {
+        const option = document.createElement('option');
+        option.value = title.name;
+        option.textContent = title.name;
+        selectElement.appendChild(option);
+    });
+}
+
+function updateAchievementSelect() {
+    const selectElement = document.getElementById('assign-achievement');
+    selectElement.textContent = ''; // Clear existing options
+
+    achievements.forEach(achievement => {
+        const option = document.createElement('option');
+        option.value = achievement.name;
+        option.textContent = achievement.name;
+        console.log(achievement.name + "Achievo")
+        selectElement.appendChild(option);
+
+        
+    });
+}
+
+addTitleForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const titleName = document.getElementById('title-name').value;
+    const titleDescription = document.getElementById('title-description').value;
+    const title = { name: titleName, description: titleDescription};
+    // Add validation if necessary
+    titles.push(title);
+    console.log(titles)
+    characterTitles[selectedCharacter] = [];
+    updateTitleSelect();
+    addTitleForm.reset();
+    saveGameState();
+});
+
+
+
+assignTitleForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const character = assignTitleCharacterSelect.value;
+    const titleName = assignTitleSelect.value;
+    const title = titles.find(t => t.name === titleName);
+    characterTitles[character].push(title);
+    saveGameState();
+    if (characterDetailsSelect.value === character) {
+        updateTitlesDisplay(character);
+    }
+});
+
+
+console.log (addAchievementForm + "Achievement")
+addAchievementForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const achievementName = document.getElementById('achievement-name').value;
+    const achievementDescription = document.getElementById('achievement-description').value;
+    const achievement = { name: achievementName, description: achievementDescription};
+    // Add validation if necessary
+    achievements.push(achievement);
+    // Add validation if necessary
+    characterAchievements[selectedCharacter] = [];
+    updateAchievementSelect();
+    addAchievementForm.reset();
+    saveGameState();
+    
+});
+
+
+
+assignAchievementForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const character = assignAchievementCharacterSelect.value;
+    const achievementName = assignAchievementSelect.value;
+    const achievement = achievements.find(a => a.name === achievementName);
+    characterAchievements[character].push(achievement);
+    saveGameState();
+    if (characterDetailsSelect.value === character) {
+        updateAchievementsDisplay(character);
+    }
+});
+
+function updateTitlesDisplay(character) {
+    if (!character) return;
+
+    let titlesHtml = '';
+
+    characterTitles[character].forEach(title => {
+        titlesHtml += generateTitleItemHtml(title);
+    });
+    console.log(titlesHtml + "Titleshtml")
+    characterFolders[character].forEach(folder => {
+        if (folder.type === 'titles') {
+            titlesHtml += generateFolderHtml(folder.name, folder.items, 'titles');
+        }
+    });
+
+    // Update the titles list with the generated HTML
+    titlesList.innerHTML = titlesHtml ? `<ul>${titlesHtml}</ul>` : 'No titles';
+}
+
+function updateAchievementsDisplay(character) {
+    if (!character) return;
+
+    let achievementsHtml = '';
+
+    characterAchievements[character].forEach(achievement => {
+        achievementsHtml += generateAchievementItemHtml(achievement);
+    });
+
+    characterFolders[character].forEach(folder => {
+        if (folder.type === 'achievements') {
+            achievementsHtml += generateFolderHtml(folder.name, folder.items, 'achievements');
+        }
+    });
+
+    // Update the achievements list with the generated HTML
+    achievementsList.innerHTML = achievementsHtml ? `<ul>${achievementsHtml}</ul>` : 'No achievements';
+}
+
+// Function to generate the HTML for a single title item
+function generateTitleItemHtml(title) {
+    // Example HTML structure for a title item
+    //TODO: Fully convert the below stuff to titles instead of skills.
+    return `
+        <li class="draggable-title" draggable="true" data-title-name="${title.name}">
+            ${title.name} - ${title.description}
+            <button onclick="console.log('Clicked + button for skill:', '${title.name.replace("'", "\\'")}'); addNoteModalHandler('titles', '${title.name.replace("'", "\\'")}')">+</button>
+            <button onclick="console.log('Clicked Read Notes button for skill:', '${title.name.replace("'", "\\'")}'); readNotesModalHandler('titles', '${title.name.replace("'", "\\'")}')">Read Notes</button>
+        </li>`;
+}
+
+// Function to generate the HTML for a single achievement item
+function generateAchievementItemHtml(achievement) {
+    console.log(achievement)
+    // Example HTML structure for an achievement item
+    //TODO: Fully convert the below stuff to achievements instead of skills.
+    return `
+        <li class="draggable-achievement" draggable="true" data-achievement-name="${achievement.name}">
+            ${achievement.name} - ${achievement.description}
+            <button onclick="console.log('Clicked + button for skill:', '${achievement.name.replace("'", "\\'")}'); addNoteModalHandler('achievements', '${achievement.name.replace("'", "\\'")}')">+</button>
+            <button onclick="console.log('Clicked Read Notes button for skill:', '${achievement.name.replace("'", "\\'")}'); readNotesModalHandler('achievements', '${achievement.name.replace("'", "\\'")}')">Read Notes</button>
+        </li>`;
+}
 
 bestLoadoutForm.addEventListener('submit', (e) => {
     console.log("L")
@@ -516,13 +707,33 @@ function createFolder(folderName, itemsToAdd, type) {
             if (index !== -1) {
                 characterSkills[selectedCharacter].splice(index, 1);
             }
+        } else if (type === 'titles') {
+            const index = characterTitles[selectedCharacter].findIndex(existingTitle => existingTitle.name === item.name);
+            if (index !== -1) {
+                characterTitles[selectedCharacter].splice(index, 1);
+            }
+        } else if (type === 'achievements') {
+            const index = characterAchievements[selectedCharacter].findIndex(existingAchievement => existingAchievement.name === item.name);
+            if (index !== -1) {
+                characterAchievements[selectedCharacter].splice(index, 1);
+            }
         }
     });
 
     if (type === 'items') {
+        console.log("DANGER")
         updateInventoryDisplay(selectedCharacter);
     } else if (type === 'skills') {
+        console.log("DANGER")
         updateSkillsDisplay(selectedCharacter);
+    } else if (type === 'titles') {
+        console.log("DANGER")
+        updateTitlesDisplay(selectedCharacter);
+    } else if (type === 'achievements') {
+        console.log("DANGER")
+        updateAchievementsDisplay(selectedCharacter);
+    } else {
+        console.log("No type detected")
     }
 }
 
@@ -530,28 +741,23 @@ function promptForFolderName(callback) {
     console.log("S")
     const folderName = prompt("Enter a name for the new folder:");
     if (folderName) {
+        console.log("Help")
         callback(folderName);
     }
 }
 
-// Drag and Drop Functions
 function attachDragAndDropHandlers() {
-    console.log("T")
+    console.log("T");
     const draggables = document.querySelectorAll('.draggable');
     const skillDraggables = document.querySelectorAll('.draggable-skill');
+    const achievementDraggables = document.querySelectorAll('.draggable-achievement');
+    const titleDraggables = document.querySelectorAll('.draggable-title');
     const folders = document.querySelectorAll('.folder');
 
-    draggables.forEach(draggable => {
-        draggable.addEventListener('dragstart', handleDragStart);
-        draggable.addEventListener('dragover', handleDragOver);
-        draggable.addEventListener('drop', handleDrop);
-    });
-
-    skillDraggables.forEach(draggable => {
-        draggable.addEventListener('dragstart', handleDragStartSkill);
-        draggable.addEventListener('dragover', handleDragOver);
-        draggable.addEventListener('drop', handleDropSkill);
-    });
+    addDragHandlers(draggables, 'items');
+    addDragHandlers(skillDraggables, 'skills');
+    addDragHandlers(achievementDraggables, 'achievements');
+    addDragHandlers(titleDraggables, 'titles');
 
     folders.forEach(folder => {
         folder.addEventListener('dragover', handleDragOver);
@@ -559,52 +765,64 @@ function attachDragAndDropHandlers() {
     });
 }
 
-function handleDragStart(e) {
-    e.dataTransfer.setData('text/plain', e.target.getAttribute('data-item-name'));
+function addDragHandlers(draggables, type) {
+    console.log("Drag" + draggables) 
+    draggables.forEach(draggable => {
+        draggable.addEventListener('dragstart', (e) => handleDragStart(e, type));
+        draggable.addEventListener('dragover', handleDragOver);
+        draggable.addEventListener('drop', (e) => handleDrop(e, type));
+    });
 }
 
-function handleDragStartSkill(e) {
-    e.dataTransfer.setData('text/plain', e.target.getAttribute('data-skill-name'));
+function handleDragStart(e, type) {
+    let dataName = '';
+    dataName = e.target.getAttribute(`data-${type.slice(0, -1)}-name`);
+    e.dataTransfer.setData('text/plain', dataName);
 }
 
 function handleDragOver(e) {
     e.preventDefault();
 }
 
-function handleDrop(e) {
+function handleDrop(e, type) {
+    console.log (type + "Dropped")
     e.preventDefault();
-    const draggedItemName = e.dataTransfer.getData('text/plain');
-    const targetItemName = e.target.getAttribute('data-item-name');
-    if (draggedItemName && targetItemName) {
+    const draggedName = e.dataTransfer.getData('text/plain');
+    const targetName = e.target.getAttribute(`data-${type.slice(0, -1)}-name`);
+    console.log (draggedName + " OOO " + targetName)
+    if (draggedName && targetName) {
+        console.log("drag and target")
         promptForFolderName(folderName => {
-            const draggedItemIndex = items.findIndex(item => item.name === draggedItemName);
-            if (draggedItemIndex !== -1) {
-                const targetItemIndex = items.findIndex(item => item.name === targetItemName);
-                if (targetItemIndex !== -1) {
-                    createFolder(folderName, [items[draggedItemIndex], items[targetItemIndex]], 'items');
-                    // Remove the dragged item from the original items array
-                    items.splice(draggedItemIndex, 1);
-                    updateItemSelect(); // Update the select dropdown without the removed item
-                }
+            // Dynamically get the correct array based on the type
+            let array;
+            switch (type) {
+                case 'skills':
+                    array = skills;
+                    break;
+                case 'achievements':
+                    array = achievements;
+                    break;
+                case 'titles':
+                    array = titles;
+                    break;
+                case 'items':
+                    array = items;
+                    break;
+                default:
+                    console.error('Unknown type:', type);
+                    return;
             }
-        });
-    }
-}
 
-function handleDropSkill(e) {
-    e.preventDefault();
-    const draggedSkillName = e.dataTransfer.getData('text/plain');
-    const targetSkillName = e.target.getAttribute('data-skill-name');
-    if (draggedSkillName && targetSkillName) {
-        promptForFolderName(folderName => {
-            const draggedSkillIndex = skills.findIndex(skill => skill.name === draggedSkillName);
-            if (draggedSkillIndex !== -1) {
-                const targetSkillIndex = skills.findIndex(skill => skill.name === targetSkillName);
-                if (targetSkillIndex !== -1) {
-                    createFolder(folderName, [skills[draggedSkillIndex], skills[targetSkillIndex]], 'skills');
-                    // Remove the dragged skill from the original skills array
-                    skills.splice(draggedSkillIndex, 1);
-                    updateSkillSelect(); // Update the select dropdown without the removed skill
+            const draggedIndex = array.findIndex(item => item.name === draggedName);
+            if (draggedIndex !== -1) {
+                console.log("TESTTEST")
+                const targetIndex = array.findIndex(item => item.name === targetName);
+                console.log(targetIndex)
+                if (targetIndex !== -1) {
+                    createFolder(folderName, [array[draggedIndex], array[targetIndex]], type);
+                    // Remove the dragged item from the original array
+                    array.splice(draggedIndex, 1);
+                    updateSelect(type); // Update the select dropdown without the removed item
                 }
             }
         });
@@ -616,18 +834,28 @@ function handleDropOnFolder(e) {
     const draggedItemName = e.dataTransfer.getData('text/plain');
     const folderName = e.target.closest('.folder').getAttribute('data-folder-name');
     const folderType = e.target.closest('.folder').getAttribute('data-folder-type');
-    if (draggedItemName && folderName) {
+    if (draggedItemName && folderName && draggedName !== targetName) {
+        const array = window[folderType];
+        const draggedItem = array.find(item => item.name === draggedItemName);
+        const folder = characterFolders[selectedCharacter].find(folder => folder.name === folderName && folder.type === folderType);
+        folder.items.push(draggedItem);
         if (folderType === 'items') {
-            const draggedItem = items.find(item => item.name === draggedItemName);
-            const folder = characterFolders[selectedCharacter].find(folder => folder.name === folderName && folder.type === 'items');
-            folder.items.push(draggedItem);
             updateInventoryDisplay(characterDetailsSelect.value);
         } else if (folderType === 'skills') {
-            const draggedSkill = skills.find(skill => skill.name === draggedItemName);
-            const folder = folders.find(folder => folder.name === folderName && folder.type === 'skills');
-            folder.items.push(draggedSkill);
             updateSkillsDisplay(characterDetailsSelect.value);
         }
+    }
+}
+
+function updateSelect(type) {
+    if (type === 'items') {
+        updateItemSelect();
+    } else if (type === 'skills') {
+        updateSkillSelect();
+    } else if (type === 'achievements') {
+        updateAchievementSelect();
+    } else if (type === 'titles') {
+        updateTitleSelect();
     }
 }
 
@@ -803,3 +1031,4 @@ document.addEventListener('DOMContentLoaded', () => {
         sections[0].style.display = 'block';
     }
 });
+
