@@ -41,6 +41,12 @@ const addAchievementForm = document.getElementById('add-achievement-form');
 const assignAchievementForm = document.getElementById('assign-achievement-form');
 const assignAchievementCharacterSelect = document.getElementById('assign-achievement-character');
 const assignAchievementSelect = document.getElementById('assign-achievement');
+const addFolderButton = document.getElementById('add-folder-button');
+const addFolderModal = document.getElementById('add-folder-modal');
+const addFolderClose = document.getElementById('add-folder-close');
+const addFolderForm = document.getElementById('add-folder-form');
+const foldersList = document.getElementById('folders-list');
+const customFolders = [];
 
 const titles = []; // Array to store titles
 const achievements = []; // Array to store achievements
@@ -81,7 +87,8 @@ function saveGameState() {
         characterAchievements,
         notes,
         characterFolders,
-        selectedCharacter
+        selectedCharacter, 
+        customFolders
     };
     localStorage.setItem('gameState', JSON.stringify(gameState));
     console.log("Save-attempted")
@@ -130,6 +137,7 @@ function loadGameState() {
                     case 'characterTitles':
                     case 'titles':
                     case 'notes':
+                    case 'customFolders':
                         updateData(eval(prop), deepClone(gameState[prop]));
                         break;
                     case 'selectedCharacter':
@@ -148,6 +156,7 @@ function loadGameState() {
         updateSkillSelect();
         updateAchievementSelect();
         updateTitleSelect();
+        updateFoldersDisplay();
         if (selectedCharacter) {
             updateCharacterDetails();
         }
@@ -155,6 +164,67 @@ function loadGameState() {
         console.log("Game state loaded successfully");
     } else {
         console.log("No saved game state found");
+    }
+}
+
+// Event listener for opening the add folder modal
+addFolderButton.addEventListener('click', () => {
+    addFolderModal.style.display = 'block';
+});
+
+// Event listener for closing the add folder modal
+addFolderClose.onclick = () => {
+    addFolderModal.style.display = 'none';
+};
+
+// Event listener for adding a new folder
+addFolderForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const folderName = document.getElementById('folder-name').value;
+    const folderDescription = document.getElementById('folder-description').value;
+    const newFolder = { name: folderName, description: folderDescription, items: [] };
+    customFolders.push(newFolder);
+    updateFoldersDisplay();
+    addFolderForm.reset();
+    addFolderModal.style.display = 'none';
+    saveGameState();
+});
+
+function updateFoldersDisplay() {
+    foldersList.innerHTML = customFolders.map(folder => {
+        //TODO: Change the skill stuff into item stuff)
+        let itemsHTML = folder.items.map(item => `
+            <li>${item.name} - ${item.description}
+            <button onclick="console.log('Clicked + button for skill:', '${item.name.replace("'", "\\'")}'); addNoteModalHandler('skills', '${item.name.replace("'", "\\'")}')">+</button>
+            <button onclick="console.log('Clicked Read Notes button for skill:', '${item.name.replace("'", "\\'")}'); readNotesModalHandler('skills', '${item.name.replace("'", "\\'")}')">Read Notes</button>
+            </li>
+        `).join('');
+
+        // Determine initial visibility state based on folder's property
+
+        return `
+            <li>
+                <span class="folder-toggle" onclick="toggleFolderContents('${folder.name}', 'custom')">
+                    ${folder.name} - ${folder.description}
+                </span>
+                <ul class="folder-items collapsed" id="${folder.name}-items">
+                    ${itemsHTML}
+                </ul>
+                <button onclick="addFolderItemHandler('${folder.name.replace("'", "\\'")}')">+</button>
+            </li>
+        `;
+    }).join('');
+}
+
+// Function to handle adding an item to a folder
+function addFolderItemHandler(folderName) {
+    const customFolder = customFolders.find(f => f.name === folderName);
+    const itemName = prompt('Enter item name:');
+    const itemDescription = prompt('Enter item description:');
+    if (itemName && itemDescription) {
+        customFolder.items.push({ name: itemName, description: itemDescription });
+        updateFoldersDisplay();
+        saveGameState();
     }
 }
 function updateCharacterSelects() {
@@ -684,9 +754,22 @@ function generateFolderHtml(folderName, items, type = 'items') {
 }
 
 function toggleFolderContents(folderName, type) {
+    if (type === "custom") {
+        console.log("CUSTOMFOLDER")
+        const folderItems = document.getElementById(`${folderName}-items`);
+        if (folderItems) {
+            folderItems.classList.toggle('collapsed');
+            
+            // Update folder object in customFolders array to reflect current state
+            const folder = customFolders.find(f => f.name === folderName);
+            folder.expanded = folderItems.classList.contains('visible');
+        }
+    } else {
+    console.log("TOGGLE ATTEMPTED")
     const selectedCharacter = characterDetailsSelect.value;
     const folderContents = document.querySelector(`.folder[data-folder-name="${folderName}"][data-folder-type="${type}"] .folder-contents`);
     folderContents.classList.toggle('collapsed');
+    }
 }
 
 function createFolder(folderName, itemsToAdd, type) {

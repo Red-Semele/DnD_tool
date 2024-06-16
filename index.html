@@ -97,6 +97,7 @@
         <a href="#" data-target="characterInfo">Character Details</a>
         <a href="#" data-target="characterLoadout">Best Loadout</a>
         <a href="#" data-target="diceRoller">Roll dice</a>
+        <a href="#" data-target="customNotes">Write notes</a>
     </div>
     <div class="container">
         <h1>D&D Inventory Manager</h1>
@@ -207,6 +208,28 @@
                 <button type="submit">Find Best Loadout</button>
             </form>
             <div id="best-loadout-result"></div>
+        </div>
+
+        <!-- Section to display folders -->
+        <div class="section" id="customNotes">
+            <section id="folders-section">
+                <h2>Note categories</h2>
+                <ul id="folders-list"></ul>
+                <button id="add-folder-button">Add Note Category</button>
+            </section>
+        </div>
+        <!-- Modal for adding new folder -->
+        <div id="add-folder-modal" class="modal">
+            <div class="modal-content">
+                <span class="close" id="add-folder-close">&times;</span>
+                <form id="add-folder-form">
+                    <label for="folder-name">Folder Name:</label>
+                    <input type="text" id="folder-name" required>
+                    <label for="folder-description">Folder Description:</label>
+                    <textarea id="folder-description" required></textarea>
+                    <button type="submit">Add Folder</button>
+                </form>
+            </div>
         </div>
 
         <!-- Add Note Modal -->
