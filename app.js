@@ -166,6 +166,13 @@ function loadGameState() {
         console.log("No saved game state found");
     }
 }
+//TODO: Make it so that you don't need to reload the game to clear everything.
+function eraseGameState() {
+    console.log("Erasing saved game state");
+    localStorage.removeItem('gameState');
+    console.log("Saved game state erased successfully");
+    loadGameState()
+}
 
 // Event listener for opening the add folder modal
 addFolderButton.addEventListener('click', () => {

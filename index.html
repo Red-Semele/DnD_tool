@@ -81,23 +81,69 @@
         .folder-toggle {
             cursor: pointer;
         }
+        sidebar details {
+        border-top: 1px solid #575757;
+        }
+
+    .sidebar summary {
+        padding: 15px;
+        font-size: 18px;
+        color: white;
+        background-color: #333;
+        cursor: pointer;
+        list-style: none;
+    }
+
+    .sidebar summary:hover {
+        background-color: #575757;
+    }
+
+    .sidebar details[open] summary {
+        background-color: #444;
+    }
+
+    
     </style>
 </head>
 <body>
     <div class="sidebar">
-        <a href="#" data-target="characterAdd">Add Character</a>
-        <a href="#" data-target="itemAdd">Add Item</a>
-        <a href="#" data-target="characterItemAssign">Assign Item to Character</a>
-        <a href="#" data-target="skillAdd">Add Skill</a>
-        <a href="#" data-target="characterSkillAssign">Assign Skill to Character</a>
-        <a href="#" data-target="titleAdd">Add Title</a>
-        <a href="#" data-target="characterTitleAssign">Assign Title to Character</a>
-        <a href="#" data-target="achievementAdd">Add Achievement</a>
-        <a href="#" data-target="characterAchievementAssign">Assign Achievement to Character</a>
-        <a href="#" data-target="characterInfo">Character Details</a>
-        <a href="#" data-target="characterLoadout">Best Loadout</a>
-        <a href="#" data-target="diceRoller">Roll dice</a>
-        <a href="#" data-target="customNotes">Write notes</a>
+        <details>
+            <summary>Characters</summary>
+            <a href="#" data-target="characterAdd">Add Character</a>
+            <a href="#" data-target="characterInfo">Character Details</a>
+            <a href="#" data-target="characterLoadout">Best Loadout</a>
+        </details>
+        
+        <details>
+            <summary>Items</summary>
+            <a href="#" data-target="itemAdd">Add Item</a>
+            <a href="#" data-target="characterItemAssign">Assign Item to Character</a>
+        </details>
+        
+        <details>
+            <summary>Skills</summary>
+            <a href="#" data-target="skillAdd">Add Skill</a>
+            <a href="#" data-target="characterSkillAssign">Assign Skill to Character</a>
+        </details>
+        
+        <details>
+            <summary>Titles</summary>
+            <a href="#" data-target="titleAdd">Add Title</a>
+            <a href="#" data-target="characterTitleAssign">Assign Title to Character</a>
+        </details>
+        
+        <details>
+            <summary>Achievements</summary>
+            <a href="#" data-target="achievementAdd">Add Achievement</a>
+            <a href="#" data-target="characterAchievementAssign">Assign Achievement to Character</a>
+        </details>
+        
+        <details>
+            <summary>Miscellaneous</summary>
+            <a href="#" data-target="diceRoller">Roll dice</a>
+            <a href="#" data-target="customNotes">Write notes</a>
+            <a href="#" data-target="saveStuff">Save stuff</a>
+        </details>
     </div>
     <div class="container">
         <h1>D&D Inventory Manager</h1>
@@ -263,6 +309,9 @@
                 <button type="submit">Roll Dice</button>
             </form>
             <div id="dice-roll-result"></div>
+        </div>
+        <div class= "section" id="saveStuff">
+            <button onclick="eraseGameState()">Erase Save</button>
         </div>
     </div>
 
