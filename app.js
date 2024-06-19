@@ -359,7 +359,8 @@ addItemForm.addEventListener('submit', (e) => {
     const itemStat = document.getElementById('item-stat').value.trim();
     const itemValue = document.getElementById('item-value').value.trim();
     const itemRarity = document.getElementById('item-rarity').value.trim(); // Capture rarity
-    let itemQuantity = 1
+    let itemQuantity = 1;
+    let itemId = 0
 
     // Check for backslashes in stats and values
     const stats = itemStat.split('/');
@@ -373,10 +374,12 @@ addItemForm.addEventListener('submit', (e) => {
 
     const item = { 
         name: itemName, 
+        id: itemId,
         slot: itemSlot === '' ? null : itemSlot, 
         stats: statArray, 
         rarity: itemRarity,  // Include rarity in the item object
         quantity: itemQuantity
+        
     };
 
     if (itemStat === '') item.stats = [];
@@ -394,8 +397,37 @@ assignItemForm.addEventListener('submit', (e) => {
     //TODO: If there is already an item with a certain name in the person's inventory add a number id to the item that will be added so the game does not get confused.
     const character = assignCharacterSelect.value;
     const itemName = assignItemSelect.value;
-    const item = items.find(i => i.name === itemName);
-    inventory[character].push(item);
+    let item = items.find(i => i.name === itemName);
+    // Check if there are items with the same name in the character's inventory
+    const sameNameItems = inventory[character].filter(i => i.name === itemName);
+    let itemsToAssignId = items.filter(i => i.name === itemName && i.id === 0);
+    
+    // Determine the new item's ID
+    let newId;
+    if (sameNameItems.length > 0) {
+        // Find the highest ID among the same-name items
+        const maxId = Math.max(...sameNameItems.map(i => i.id));
+        newId = maxId + 1;
+        console.log(maxId + "MAX")
+        console.log(sameNameItems)
+        console.log("COPPY ADDED")
+    } else {
+        // This is the first item with this name
+        newId = 1;
+    }
+    // Assign the new ID to the item TODO: This should only update the item.id that is zero but it just works once and then stops. 
+    itemsToAssignId.forEach((item, index) => {
+        let clonedItem = {...item}; // Shallow clone
+        
+        // Update the cloned item's ID
+        clonedItem.id = newId + index; // Ensure each item gets a unique ID
+        
+        // Push the cloned item with updated ID to inventory
+        inventory[character].push(clonedItem);
+    });
+    console.log("Id " + item.id)
+
+    //inventory[character].push(item);
     
     if (characterDetailsSelect.value === character) {
         updateInventoryDisplay(character);
@@ -736,7 +768,7 @@ function generateInventoryItemHtml(item) {
     return `
          <li class="draggable" draggable="true" data-item-name="${item.name}">
             ${item.name.replace("'", "\\'")} (Slot: ${item.slot ? item.slot : 'No Slot'}, Stats: ${statHtml}, Rarity: ${item.rarity})
-            <input type="number" min="0" value="${item.quantity}" onchange="handleQuantityChange(event, '${item.name.replace("'", "\\'")}')">
+            <input type="number" min="0" value="${item.quantity}" onchange="handleQuantityChange(event, '${item.name.replace("'", "\\'")}', ${item.id})">
             <button onclick="addNoteModalHandler('items', '${item.name.replace("'", "\\'")}')">+</button>
             <button onclick="readNotesModalHandler('items', '${item.name.replace("'", "\\'")}')">Read Notes</button>
         </li>`;
@@ -758,11 +790,17 @@ function deleteItemFromInventory(itemName) {
     console.log(`Deleting item: ${itemName}`);
 }
 
-function setItemQuantity(itemName, quantity) {
+function setItemQuantity(itemName, itemId, quantity) {
     // Logic to set the item quantity
     const selectedCharacter = characterDetailsSelect.value;
     if (inventory[selectedCharacter]) {
-        const itemIndex = inventory[selectedCharacter].findIndex(item => item.name === itemName);
+        const itemIndex = inventory[selectedCharacter].findIndex(item => item.name === itemName && item.id === itemId) ;
+        const indexTest = inventory[selectedCharacter].findIndex(item => item.id === itemId) ; //TODO: For some reason there are 0 entries for this one. Find out why.
+        const indexTest2 = inventory[selectedCharacter].findIndex(item => item.name === itemName) ;
+        console.log(itemIndex + "INDEX")
+        console.log(itemId + "ITEMID")
+        console.log(indexTest)
+        console.log(indexTest2)
         if (itemIndex !== -1) {
             // Update the quantity of the existing item
             inventory[selectedCharacter][itemIndex].quantity = quantity;
@@ -778,23 +816,23 @@ function setItemQuantity(itemName, quantity) {
     } else {
         console.log(`Character ${selectedCharacter} does not have an inventory`);
     }
-    console.log(`Setting quantity of ${itemName} to ${quantity}`);
+    console.log(`Setting quantity of ${itemName} ${itemId} to ${quantity}`);
     
 }
 
-function handleQuantityChange(event, itemName) {
+function handleQuantityChange(event, itemName, itemId) {
     const newQuantity = event.target.value;
     if (newQuantity == 0) {
         if (confirm("Quantity is 0. Do you want to delete the item from the inventory?")) {
             // Delete the item from the inventory
-            deleteItemFromInventory(itemName);
+            deleteItemFromInventory(itemName, itemId);
         } else {
             // Set the quantity to 0
-            setItemQuantity(itemName, 0);
+            setItemQuantity(itemName, itemId, 0);
         }
     } else {
         // Update the quantity
-        setItemQuantity(itemName, newQuantity);
+        setItemQuantity(itemName, itemId, newQuantity);
     }
 }
 
