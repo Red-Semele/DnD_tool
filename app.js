@@ -359,6 +359,7 @@ addItemForm.addEventListener('submit', (e) => {
     const itemStat = document.getElementById('item-stat').value.trim();
     const itemValue = document.getElementById('item-value').value.trim();
     const itemRarity = document.getElementById('item-rarity').value.trim(); // Capture rarity
+    let itemQuantity = 1
 
     // Check for backslashes in stats and values
     const stats = itemStat.split('/');
@@ -374,7 +375,8 @@ addItemForm.addEventListener('submit', (e) => {
         name: itemName, 
         slot: itemSlot === '' ? null : itemSlot, 
         stats: statArray, 
-        rarity: itemRarity  // Include rarity in the item object
+        rarity: itemRarity,  // Include rarity in the item object
+        quantity: itemQuantity
     };
 
     if (itemStat === '') item.stats = [];
@@ -389,6 +391,7 @@ addItemForm.addEventListener('submit', (e) => {
 assignItemForm.addEventListener('submit', (e) => {
     console.log("I")
     e.preventDefault();
+    //TODO: If there is already an item with a certain name in the person's inventory add a number id to the item that will be added so the game does not get confused.
     const character = assignCharacterSelect.value;
     const itemName = assignItemSelect.value;
     const item = items.find(i => i.name === itemName);
@@ -724,15 +727,75 @@ function showNoteDetails(index) {
 
 function generateInventoryItemHtml(item) {
     console.log("N");
-    console.log(item.stats)
+    console.log(item.stats);
     console.log(Array.isArray(item.stats)); // Verify if it's an array
     const statHtml = item.stats.map(s => `${s.stat}: ${s.value}`).join(', ');
+    
+    
+
     return `
          <li class="draggable" draggable="true" data-item-name="${item.name}">
             ${item.name.replace("'", "\\'")} (Slot: ${item.slot ? item.slot : 'No Slot'}, Stats: ${statHtml}, Rarity: ${item.rarity})
+            <input type="number" min="0" value="${item.quantity}" onchange="handleQuantityChange(event, '${item.name.replace("'", "\\'")}')">
             <button onclick="addNoteModalHandler('items', '${item.name.replace("'", "\\'")}')">+</button>
             <button onclick="readNotesModalHandler('items', '${item.name.replace("'", "\\'")}')">Read Notes</button>
         </li>`;
+}
+
+// Assume these functions are defined elsewhere in your code
+function deleteItemFromInventory(itemName) {
+    const selectedCharacter = characterDetailsSelect.value;
+    if (inventory[selectedCharacter]) {
+        const itemIndex = inventory[selectedCharacter].findIndex(item => item.name === itemName);
+        if (itemIndex !== -1) {
+            inventory[selectedCharacter].splice(itemIndex, 1);
+            if (characterDetailsSelect.value === selectedCharacter) {
+                updateInventoryDisplay(selectedCharacter);
+            }
+            saveGameState();
+        }
+    }
+    console.log(`Deleting item: ${itemName}`);
+}
+
+function setItemQuantity(itemName, quantity) {
+    // Logic to set the item quantity
+    const selectedCharacter = characterDetailsSelect.value;
+    if (inventory[selectedCharacter]) {
+        const itemIndex = inventory[selectedCharacter].findIndex(item => item.name === itemName);
+        if (itemIndex !== -1) {
+            // Update the quantity of the existing item
+            inventory[selectedCharacter][itemIndex].quantity = quantity;
+        } else {
+            // If the item does not exist, you can add it or handle it accordingly
+            console.log(`Item ${itemName} does not exist in the inventory of ${selectedCharacter}`);
+        }
+        
+        if (characterDetailsSelect.value === selectedCharacter) {
+            updateInventoryDisplay(selectedCharacter);
+        }
+        saveGameState();
+    } else {
+        console.log(`Character ${selectedCharacter} does not have an inventory`);
+    }
+    console.log(`Setting quantity of ${itemName} to ${quantity}`);
+    
+}
+
+function handleQuantityChange(event, itemName) {
+    const newQuantity = event.target.value;
+    if (newQuantity == 0) {
+        if (confirm("Quantity is 0. Do you want to delete the item from the inventory?")) {
+            // Delete the item from the inventory
+            deleteItemFromInventory(itemName);
+        } else {
+            // Set the quantity to 0
+            setItemQuantity(itemName, 0);
+        }
+    } else {
+        // Update the quantity
+        setItemQuantity(itemName, newQuantity);
+    }
 }
 
 function generateSkillItemHtml(skill) {
@@ -751,6 +814,7 @@ function generateSkillItemHtml(skill) {
 
 function generateFolderHtml(folderName, items, type = 'items') {
     console.log("O")
+    //TODO: Add a remove button.
     return `
         <li class="folder" data-folder-name="${folderName}" data-folder-type="${type}" data-character="${selectedCharacter}">
             <span class="folder-toggle" onclick="toggleFolderContents('${folderName}', '${type}')">${folderName}</span>
