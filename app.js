@@ -66,6 +66,7 @@ const notes = {
 
 let currentNoteType = '';
 let currentNoteItem = '';
+let currentNoteId = '';
 
 // Folder data structure
 //const folders = [];
@@ -406,7 +407,7 @@ assignItemForm.addEventListener('submit', (e) => {
     let newId;
     if (sameNameItems.length > 0) {
         // Find the highest ID among the same-name items
-        const maxId = Math.max(...sameNameItems.map(i => i.id));
+        const maxId = Math.max(...sameNameItems.map(i => parseInt(i.id.split('_')[0])));
         newId = maxId + 1;
         console.log(maxId + "MAX")
         console.log(sameNameItems)
@@ -420,7 +421,7 @@ assignItemForm.addEventListener('submit', (e) => {
         let clonedItem = {...item}; // Shallow clone
         
         // Update the cloned item's ID
-        clonedItem.id = newId + index; // Ensure each item gets a unique ID
+        clonedItem.id = `${newId + index}_${character}`;
         
         // Push the cloned item with updated ID to inventory
         inventory[character].push(clonedItem);
@@ -440,7 +441,8 @@ addSkillForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const skillName = document.getElementById('skill-name').value;
     const skillDescription = document.getElementById('skill-description').value;
-    const skill = { name: skillName, description: skillDescription, lastRoll: null};
+    let skillId = ``;
+    const skill = { name: skillName, id: skillId, description: skillDescription, lastRoll: null};
     skills.push(skill);
     notes.skills[skillName] = [];
     updateSkillSelect();
@@ -454,6 +456,10 @@ assignSkillForm.addEventListener('submit', (e) => {
     const character = assignSkillCharacterSelect.value;
     const skillName = assignSkillSelect.value;
     const skill = skills.find(s => s.name === skillName);
+    const skillId = `${character}`;
+    skill.id = skillId; // Assign the generated ID to the skill
+    console.log(skill.id + "SkillId")
+    
     characterSkills[character].push(skill);
     if (characterDetailsSelect.value === character) {
         updateSkillsDisplay(character);
@@ -681,10 +687,11 @@ addNoteForm.addEventListener('submit', (e) => {
     
     // Ensure currentNoteType and currentNoteItem are set correctly
     if (currentNoteType && currentNoteItem) {
-        if (!notes[currentNoteType][currentNoteItem]) {
-            notes[currentNoteType][currentNoteItem] = [];
+        console.log(currentNoteItem + " NoteItem and Id" + currentNoteId)
+        if (!notes[currentNoteType][currentNoteItem][currentNoteId]) {
+            notes[currentNoteType][currentNoteItem][currentNoteId] = [];
         }
-        notes[currentNoteType][currentNoteItem].push({ title: noteTitle, content: noteContent });
+        notes[currentNoteType][currentNoteItem][currentNoteId].push({ title: noteTitle, content: noteContent });
         
         // Update UI to reflect the newly added note
         if (currentNoteType === 'items') {
@@ -721,10 +728,15 @@ window.onclick = (event) => {
 
 characterDetailsSelect.addEventListener('change', updateCharacterDetails);
 
-function addNoteModalHandler(type, item) {
+function addNoteModalHandler(type, item, itemId) {
     console.log('Adding note modal handler called.');
     currentNoteType = type;
     currentNoteItem = item;
+    currentNoteId = itemId
+    currentNoteCharacter = selectedCharacter
+    if(currentNoteId === undefined){
+        currentNoteId = 1
+    }
     console.log('Current note type:', currentNoteType);
     console.log('Current note item:', currentNoteItem);
     addNoteModal.style.display = "block";
@@ -732,13 +744,19 @@ function addNoteModalHandler(type, item) {
     
 }
 
-function readNotesModalHandler(type, item) {
+function readNotesModalHandler(type, item, itemId) {
     console.log('Reading notes modal handler called.');
     currentNoteType = type;
     currentNoteItem = item;
+    currentNoteId = itemId;
+    currentNoteCharacter = selectedCharacter
+    if(currentNoteId === undefined){
+        currentNoteId = 1
+    }
+    console.log (selectedCharacter)
     console.log('Current note type:', currentNoteType);
     console.log('Current note item:', currentNoteItem);
-    const itemNotes = notes[type][item] || [];
+    const itemNotes = notes[currentNoteType][currentNoteItem][currentNoteId] || [];
     
     // Prepare HTML for displaying notes
     notesList.innerHTML = itemNotes.map((note, index) => `<p class="note-title" onclick="showNoteDetails(${index})">${note.title}</p>`).join('');
@@ -750,7 +768,7 @@ function readNotesModalHandler(type, item) {
 
 function showNoteDetails(index) {
     console.log("M")
-    const itemNotes = notes[currentNoteType][currentNoteItem] || [];
+    const itemNotes = notes[currentNoteType][currentNoteItem][currentNoteId] || [];
     const note = itemNotes[index];
     noteTitleDisplay.innerHTML = note.title;
     noteContentDisplay.innerHTML = note.content;
@@ -769,8 +787,8 @@ function generateInventoryItemHtml(item) {
          <li class="draggable" draggable="true" data-item-name="${item.name}">
             ${item.name.replace("'", "\\'")} (Slot: ${item.slot ? item.slot : 'No Slot'}, Stats: ${statHtml}, Rarity: ${item.rarity})
             <input type="number" min="0" value="${item.quantity}" onchange="handleQuantityChange(event, '${item.name.replace("'", "\\'")}', ${item.id})">
-            <button onclick="addNoteModalHandler('items', '${item.name.replace("'", "\\'")}')">+</button>
-            <button onclick="readNotesModalHandler('items', '${item.name.replace("'", "\\'")}')">Read Notes</button>
+            <button onclick="addNoteModalHandler('items', '${item.name.replace("'", "\\'")}', '${item.id}')">+</button>
+            <button onclick="readNotesModalHandler('items', '${item.name.replace("'", "\\'")}', '${item.id}')">Read Notes</button>
         </li>`;
 }
 
@@ -841,12 +859,11 @@ function generateSkillItemHtml(skill) {
     return `
         <li class="draggable-skill" draggable="true" data-skill-name="${skill.name}">
             ${skill.name} - ${skill.description}
-            <button onclick="console.log('Clicked + button for skill:', '${skill.name.replace("'", "\\'")}'); addNoteModalHandler('skills', '${skill.name.replace("'", "\\'")}')">+</button>
-            <button onclick="console.log('Clicked Read Notes button for skill:', '${skill.name.replace("'", "\\'")}'); readNotesModalHandler('skills', '${skill.name.replace("'", "\\'")}')">Read Notes</button>
+            <button onclick="console.log('Clicked + button for skill:', '${skill.name.replace("'", "\\'")}', '${skill.id}'); addNoteModalHandler('skills', '${skill.name.replace("'", "\\'")}', '${skill.id}')">+</button>
+            <button onclick="console.log('Clicked Read Notes button for skill:', '${skill.name.replace("'", "\\'")}', '${skill.id}'); readNotesModalHandler('skills', '${skill.name.replace("'", "\\'")}', '${skill.id}')">Read Notes</button>
             <button id="add-roll-${skill.name.replace("'", "\\'")}" onclick="console.log('Clicked Add Roll button for skill:', '${skill.name.replace("'", "\\'")}'); addRoll('${skill.name.replace("'", "\\'")}')">Add Roll</button>
             <button id="perform-${skill.name.replace("'", "\\'")}" style="display:none;" onclick="console.log(this.id + 'Clicked Perform button for skill:', '${skill.name.replace("'", "\\'")}'); performRoll('${skill.name.replace("'", "\\'")}', '${skill.lastRoll}')">Perform</button>
             <button id="edit-${skill.name.replace("'", "\\'")}" style="display:none;" onclick="editRoll('${skill.name.replace("'", "\\'")}')">Edit Roll</button>
-            <button onclick="readNotesModalHandler('skills', '${skill.name.replace("'", "\\'")}')">Read Notes</button>
         </li>`;
 }
 
