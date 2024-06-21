@@ -47,6 +47,7 @@ const addFolderClose = document.getElementById('add-folder-close');
 const addFolderForm = document.getElementById('add-folder-form');
 const foldersList = document.getElementById('folders-list');
 const customFolders = [];
+const headers = document.querySelectorAll(".toggle-header");
 
 const titles = []; // Array to store titles
 const achievements = []; // Array to store achievements
@@ -1313,20 +1314,24 @@ document.querySelectorAll('.sidebar a').forEach(link => {
     });
 });
 
-const headers = document.querySelectorAll(".toggle-header");
 
-headers.forEach(header => {
-    header.addEventListener("click", function() {
-        const targetId = header.getAttribute("data-target");
-        const target = document.getElementById(targetId);
-        console.log("Target " + targetId + target)
 
-        if (target.style.display === "none") {
-            target.style.display = "block";
-            console.log("Now it works")
-        } else {
-            console.log("You are right")
-            target.style.display = "none";
-        }
+document.addEventListener("DOMContentLoaded", function() {
+    // Your existing code here
+    headers.forEach(header => {
+        header.addEventListener("click", function() {
+            const targetId = header.getAttribute("data-target");
+            const target = document.getElementById(targetId);
+
+            if (!target) return; // Exit early if target element is not found
+
+            if (target.style.display === "none") {
+                target.style.display = "block";
+                console.log("Now it works.")
+            } else {
+                target.style.display = "none";
+                console.log ("You are right!")
+            }
+        });
     });
 });
