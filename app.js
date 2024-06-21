@@ -71,7 +71,10 @@ let currentNoteId = '';
 // Folder data structure
 //const folders = [];
 const characterFolders = {};
-
+document.getElementById('title-list').style.display = "none";
+document.getElementById('achievement-list').style.display = "none";
+document.getElementById('inventory-list').style.display = "none";
+document.getElementById('skills-list').style.display = "none";
 
 document.addEventListener('DOMContentLoaded', loadGameState);
 // Helper Functions
@@ -1306,6 +1309,24 @@ document.querySelectorAll('.sidebar a').forEach(link => {
         const target = link.getAttribute('data-target');
         if (target) {
             document.getElementById(target).style.display = 'block';
+        }
+    });
+});
+
+const headers = document.querySelectorAll(".toggle-header");
+
+headers.forEach(header => {
+    header.addEventListener("click", function() {
+        const targetId = header.getAttribute("data-target");
+        const target = document.getElementById(targetId);
+        console.log("Target " + targetId + target)
+
+        if (target.style.display === "none") {
+            target.style.display = "block";
+            console.log("Now it works")
+        } else {
+            console.log("You are right")
+            target.style.display = "none";
         }
     });
 });

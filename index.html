@@ -124,6 +124,12 @@
         .sidebar details[open] summary {
             background-color: #444;
         }
+        .toggle-list {
+            display: none;
+        }
+        .toggle-header {
+             cursor: pointer;
+        }
         
     </style>
 </head>
@@ -266,14 +272,14 @@
             <h2>Character Details</h2>
             <select id="character-details-select" required></select>
             <div id="character-details">
-                <h3>Inventory</h3>
-                <div id="inventory-list"></div>
-                <h3>Skills</h3>
-                <div id="skills-list"></div>
-                <h3>Titles</h3>
-                <div id="title-list"></div>
-                <h3>Achievements</h3>
-                <div id="achievement-list"></div>
+                <h3 class="toggle-header" data-target="inventory-list">Inventory</h3>
+                <div id="inventory-list" class="toggle-list"></div>
+                <h3 class="toggle-header" data-target="skills-list">Skills</h3>
+                <div id="skills-list" class="toggle-list"></div>
+                <h3 class="toggle-header" data-target="title-list">Titles</h3>
+                <div id="title-list" class="toggle-list"></div>
+                <h3 class="toggle-header" data-target="achievement-list">Achievements</h3>
+                <div id="achievement-list" class="toggle-list"></div>
             </div>
         </div>
         
