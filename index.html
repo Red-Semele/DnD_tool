@@ -101,6 +101,26 @@
     .sidebar details[open] summary {
         background-color: #444;
     }
+    @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                margin-bottom: 20px;
+            }
+            .container {
+                margin-left: 0;
+            }
+        }
+        @media (max-width: 480px) {
+            .sidebar a, .sidebar summary {
+                font-size: 16px;
+                padding: 10px;
+            }
+        }
 
     
     </style>

@@ -1298,3 +1298,14 @@ function removefromSelect(name, type) {
     updateAchievementSelect();
     saveGameState(); // Save the game state after removal
 }
+
+document.querySelectorAll('.sidebar a').forEach(link => {
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelectorAll('.section').forEach(section => section.style.display = 'none');
+        const target = link.getAttribute('data-target');
+        if (target) {
+            document.getElementById(target).style.display = 'block';
+        }
+    });
+});
