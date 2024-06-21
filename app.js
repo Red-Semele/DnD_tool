@@ -1322,16 +1322,29 @@ document.addEventListener("DOMContentLoaded", function() {
         header.addEventListener("click", function() {
             const targetId = header.getAttribute("data-target");
             const target = document.getElementById(targetId);
+            characterDetailRevealList(target)
+        });
 
-            if (!target) return; // Exit early if target element is not found
+        header.addEventListener("touchstart", function(event) {
+            // Prevent the default click behavior on touch devices
+            event.preventDefault(target);
 
-            if (target.style.display === "none") {
-                target.style.display = "block";
-                console.log("Now it works.")
-            } else {
-                target.style.display = "none";
-                console.log ("You are right!")
-            }
+            const targetId = header.getAttribute("data-target");
+            const target = document.getElementById(targetId);
         });
     });
 });
+
+function characterDetailRevealList(target) {
+    
+
+    if (!target) return; // Exit early if target element is not found
+
+    if (target.style.display === "none") {
+        target.style.display = "block";
+        console.log("Now it works.")
+    } else {
+        target.style.display = "none";
+        console.log ("You are right!")
+    }
+}
