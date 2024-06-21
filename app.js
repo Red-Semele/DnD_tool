@@ -398,6 +398,7 @@ assignItemForm.addEventListener('submit', (e) => {
     //TODO: If there is already an item with a certain name in the person's inventory add a number id to the item that will be added so the game does not get confused.
     const character = assignCharacterSelect.value;
     const itemName = assignItemSelect.value;
+    const removeItem = document.getElementById('remove-item-checkbox').checked;
     let item = items.find(i => i.name === itemName);
     // Check if there are items with the same name in the character's inventory
     const sameNameItems = inventory[character].filter(i => i.name === itemName);
@@ -427,6 +428,9 @@ assignItemForm.addEventListener('submit', (e) => {
         inventory[character].push(clonedItem);
     });
     console.log("Id " + item.id)
+    if (removeItem) {
+        removefromSelect(item, "items"); //TODO: Add 1 function called this that can remove items, skills, achievements and titles.
+    }
 
     //inventory[character].push(item);
     
@@ -456,13 +460,17 @@ assignSkillForm.addEventListener('submit', (e) => {
     const character = assignSkillCharacterSelect.value;
     const skillName = assignSkillSelect.value;
     const skill = skills.find(s => s.name === skillName);
+    const removeSkill = document.getElementById('remove-skill-checkbox').checked;
     const skillId = `${character}`;
     skill.id = skillId; // Assign the generated ID to the skill
     console.log(skill.id + "SkillId")
     
     characterSkills[character].push(skill);
+    if (removeSkill) {
+        removefromSelect(skill, "skills");
+    }
     if (characterDetailsSelect.value === character) {
-        updateSkillsDisplay(character);
+        updateSkillsDisplay(character) //TODO: Keep checking if this acts like it should.
     }
     saveGameState();
 });
@@ -515,7 +523,11 @@ assignTitleForm.addEventListener('submit', (e) => {
     const character = assignTitleCharacterSelect.value;
     const titleName = assignTitleSelect.value;
     const title = titles.find(t => t.name === titleName);
+    const removeTitle = document.getElementById('remove-title-checkbox').checked;
     characterTitles[character].push(title);
+    if (removeTitle) {
+        removefromSelect(title, "titles");
+    }
     saveGameState();
     if (characterDetailsSelect.value === character) {
         updateTitlesDisplay(character);
@@ -546,7 +558,11 @@ assignAchievementForm.addEventListener('submit', (e) => {
     const character = assignAchievementCharacterSelect.value;
     const achievementName = assignAchievementSelect.value;
     const achievement = achievements.find(a => a.name === achievementName);
+    const removeAchievement = document.getElementById('remove-achievement-checkbox').checked;
     characterAchievements[character].push(achievement);
+    if (removeAchievement) {
+        removefromSelect(achievement, "achievements");
+    }
     saveGameState();
     if (characterDetailsSelect.value === character) {
         updateAchievementsDisplay(character);
@@ -786,7 +802,7 @@ function generateInventoryItemHtml(item) {
     return `
          <li class="draggable" draggable="true" data-item-name="${item.name}">
             ${item.name.replace("'", "\\'")} (Slot: ${item.slot ? item.slot : 'No Slot'}, Stats: ${statHtml}, Rarity: ${item.rarity})
-            <input type="number" min="0" value="${item.quantity}" onchange="handleQuantityChange(event, '${item.name.replace("'", "\\'")}', ${item.id})">
+            <input type="number" min="0" value="${item.quantity}" onchange="handleQuantityChange(event, '${item.name.replace("'", "\\'")}', '${item.id}')">
             <button onclick="addNoteModalHandler('items', '${item.name.replace("'", "\\'")}', '${item.id}')">+</button>
             <button onclick="readNotesModalHandler('items', '${item.name.replace("'", "\\'")}', '${item.id}')">Read Notes</button>
         </li>`;
@@ -1241,3 +1257,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+function removefromSelect(name, type) {
+    console.log("REMOVE ATTEMPTED")
+    if (type === "items") {
+       
+    } 
+    switch (type) {
+        case "items":
+            const itemIndex = items.findIndex(i => i.name === name.name);
+            if (itemIndex !== -1) {
+                items.splice(itemIndex, 1);
+                console.log("REMOVED")
+            }
+            break;
+        case "skills":
+            const skillIndex = skills.findIndex(s => s.name === name.name);
+            if (skillIndex !== -1) {
+                skills.splice(skillIndex, 1);
+            }
+            break;
+        case "titles":
+            const titleIndex = titles.findIndex(t => t.name === name.name);
+            if (titleIndex !== -1) {
+                titles.splice(titleIndex, 1);
+            }
+            break;
+        case "achievements":
+            const achievementIndex = achievements.findIndex(a => a.name === name.name);
+            if (titleIndex !== -1) {
+                titles.splice(achievementIndex, 1);
+            }
+            break;
+        default:
+            console.error("Unknown type:", type);
+    }
+    // Add similar logic for skills, achievements, titles if necessary
+    updateItemSelect();
+    updateSkillSelect();
+    updateTitleSelect();
+    updateAchievementSelect();
+    saveGameState(); // Save the game state after removal
+}
