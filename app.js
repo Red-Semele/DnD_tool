@@ -142,6 +142,7 @@ function loadGameState() {
                     case 'characterAchievements':
                     case 'characterTitles':
                     case 'titles':
+                    //case 'custom':
                     case 'notes':
                     case 'customFolders':
                         updateData(eval(prop), deepClone(gameState[prop]));
@@ -196,6 +197,7 @@ addFolderForm.addEventListener('submit', (e) => {
     const folderName = document.getElementById('folder-name').value;
     const folderDescription = document.getElementById('folder-description').value;
     const newFolder = { name: folderName, description: folderDescription, items: [] };
+    notes.custom[folderName] = []
     customFolders.push(newFolder);
     updateFoldersDisplay();
     addFolderForm.reset();
@@ -208,8 +210,8 @@ function updateFoldersDisplay() {
         //TODO: Change the skill stuff into item stuff)
         let itemsHTML = folder.items.map(item => `
             <li>${item.name} - ${item.description}
-            <button onclick="console.log('Clicked + button for custom folder:', '${item.name.replace("'", "\\'")}'); addNoteModalHandler('custom', '${item.name.replace("'", "\\'")}')">+</button>
-            <button onclick="console.log('Clicked Read Notes button for custom folder:', '${item.name.replace("'", "\\'")}'); readNotesModalHandler('custom', '${item.name.replace("'", "\\'")}')">Read Notes</button>
+            <button onclick="console.log('Clicked + button for custom folder:', '${item.name.replace("'", "\\'")}'); addNoteModalHandler('custom', '${item.name.replace("'", "\\'")}', '${item.id}')">+</button>
+            <button onclick="console.log('Clicked Read Notes button for custom folder:', '${item.name.replace("'", "\\'")}'); readNotesModalHandler('custom', '${item.name.replace("'", "\\'")}', '${item.id}')">Read Notes</button>
             </li>
         `).join('');
 
@@ -232,10 +234,11 @@ function updateFoldersDisplay() {
 // Function to handle adding an item to a folder
 function addFolderItemHandler(folderName) {
     const customFolder = customFolders.find(f => f.name === folderName);
-    const itemName = prompt('Enter item name:');
-    const itemDescription = prompt('Enter item description:');
+    const itemName = prompt('Enter note name:');
+    const itemDescription = prompt('Enter note description:');
     if (itemName && itemDescription) {
-        customFolder.items.push({ name: itemName, description: itemDescription });
+        customFolder.items.push({ name: itemName, description: itemDescription, id: folderName });
+        notes.custom[itemName] = []
         updateFoldersDisplay();
         saveGameState();
     }
