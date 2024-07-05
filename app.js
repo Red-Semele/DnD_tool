@@ -62,7 +62,8 @@ const notes = {
     items: {},
     skills: {},
     titles: {}, // Object to store notes for titles
-    achievements: {} // Object to store notes for achievements
+    achievements: {}, // Object to store notes for achievements
+    custom: {}
 };
 
 let currentNoteType = '';
@@ -207,8 +208,8 @@ function updateFoldersDisplay() {
         //TODO: Change the skill stuff into item stuff)
         let itemsHTML = folder.items.map(item => `
             <li>${item.name} - ${item.description}
-            <button onclick="console.log('Clicked + button for skill:', '${item.name.replace("'", "\\'")}'); addNoteModalHandler('skills', '${item.name.replace("'", "\\'")}')">+</button>
-            <button onclick="console.log('Clicked Read Notes button for skill:', '${item.name.replace("'", "\\'")}'); readNotesModalHandler('skills', '${item.name.replace("'", "\\'")}')">Read Notes</button>
+            <button onclick="console.log('Clicked + button for custom folder:', '${item.name.replace("'", "\\'")}'); addNoteModalHandler('custom', '${item.name.replace("'", "\\'")}')">+</button>
+            <button onclick="console.log('Clicked Read Notes button for custom folder:', '${item.name.replace("'", "\\'")}'); readNotesModalHandler('custom', '${item.name.replace("'", "\\'")}')">Read Notes</button>
             </li>
         `).join('');
 
@@ -508,13 +509,15 @@ function updateAchievementSelect() {
 
 addTitleForm.addEventListener('submit', (e) => {
     e.preventDefault();
+    
     const titleName = document.getElementById('title-name').value;
     const titleDescription = document.getElementById('title-description').value;
-    const title = { name: titleName, description: titleDescription};
+    let titleId = "";
+    const title = { name: titleName, description: titleDescription, id: titleId};
     // Add validation if necessary
     titles.push(title);
     console.log(titles)
-    characterTitles[selectedCharacter] = [];
+    notes.titles[titleName] = [];
     updateTitleSelect();
     addTitleForm.reset();
     saveGameState();
@@ -528,6 +531,8 @@ assignTitleForm.addEventListener('submit', (e) => {
     const titleName = assignTitleSelect.value;
     const title = titles.find(t => t.name === titleName);
     const removeTitle = document.getElementById('remove-title-checkbox').checked;
+    const titleId = `${character}`;
+    title.id = titleId; // Assign the generated ID to the skill
     characterTitles[character].push(title);
     if (removeTitle) {
         removefromSelect(title, "titles");
@@ -544,11 +549,13 @@ addAchievementForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const achievementName = document.getElementById('achievement-name').value;
     const achievementDescription = document.getElementById('achievement-description').value;
-    const achievement = { name: achievementName, description: achievementDescription};
+    let achievementId = "";
+    const achievement = { name: achievementName, description: achievementDescription, id: achievementId};
+    
     // Add validation if necessary
     achievements.push(achievement);
     // Add validation if necessary
-    characterAchievements[selectedCharacter] = [];
+    notes.achievements[achievementName] = [];
     updateAchievementSelect();
     addAchievementForm.reset();
     saveGameState();
@@ -563,6 +570,8 @@ assignAchievementForm.addEventListener('submit', (e) => {
     const achievementName = assignAchievementSelect.value;
     const achievement = achievements.find(a => a.name === achievementName);
     const removeAchievement = document.getElementById('remove-achievement-checkbox').checked;
+    const achievementId = `${character}`;
+    achievement.id = achievementId; // Assign the generated ID to the skill
     characterAchievements[character].push(achievement);
     if (removeAchievement) {
         removefromSelect(achievement, "achievements");
@@ -618,8 +627,8 @@ function generateTitleItemHtml(title) {
     return `
         <li class="draggable-title" draggable="true" data-title-name="${title.name}">
             ${title.name} - ${title.description}
-            <button onclick="console.log('Clicked + button for skill:', '${title.name.replace("'", "\\'")}'); addNoteModalHandler('titles', '${title.name.replace("'", "\\'")}')">+</button>
-            <button onclick="console.log('Clicked Read Notes button for skill:', '${title.name.replace("'", "\\'")}'); readNotesModalHandler('titles', '${title.name.replace("'", "\\'")}')">Read Notes</button>
+            <button onclick="console.log('Clicked + button for skill:', '${title.name.replace("'", "\\'")}'); addNoteModalHandler('titles', '${title.name.replace("'", "\\'")}', '${title.id}')">+</button>
+            <button onclick="console.log('Clicked Read Notes button for skill:', '${title.name.replace("'", "\\'")}'); readNotesModalHandler('titles', '${title.name.replace("'", "\\'")}', '${title.id}')">Read Notes</button>
         </li>`;
 }
 
@@ -631,8 +640,8 @@ function generateAchievementItemHtml(achievement) {
     return `
         <li class="draggable-achievement" draggable="true" data-achievement-name="${achievement.name}">
             ${achievement.name} - ${achievement.description}
-            <button onclick="console.log('Clicked + button for skill:', '${achievement.name.replace("'", "\\'")}'); addNoteModalHandler('achievements', '${achievement.name.replace("'", "\\'")}')">+</button>
-            <button onclick="console.log('Clicked Read Notes button for skill:', '${achievement.name.replace("'", "\\'")}'); readNotesModalHandler('achievements', '${achievement.name.replace("'", "\\'")}')">Read Notes</button>
+            <button onclick="console.log('Clicked + button for skill:', '${achievement.name.replace("'", "\\'")}'); addNoteModalHandler('achievements', '${achievement.name.replace("'", "\\'")}', '${achievement.id}')">+</button>
+            <button onclick="console.log('Clicked Read Notes button for skill:', '${achievement.name.replace("'", "\\'")}'); readNotesModalHandler('achievements', '${achievement.name.replace("'", "\\'")}', '${achievement.id}')">Read Notes</button>
         </li>`;
 }
 
@@ -707,9 +716,11 @@ addNoteForm.addEventListener('submit', (e) => {
     
     // Ensure currentNoteType and currentNoteItem are set correctly
     if (currentNoteType && currentNoteItem) {
-        console.log(currentNoteItem + " NoteItem and Id" + currentNoteId)
+        console.log(currentNoteItem + " NoteItem and Id" + currentNoteId + "Type" + currentNoteType)
+        console.log(notes[currentNoteType][currentNoteItem][currentNoteId])
         if (!notes[currentNoteType][currentNoteItem][currentNoteId]) {
             notes[currentNoteType][currentNoteItem][currentNoteId] = [];
+            console.log(notes[currentNoteType][currentNoteItem][currentNoteId])
         }
         notes[currentNoteType][currentNoteItem][currentNoteId].push({ title: noteTitle, content: noteContent });
         
@@ -718,8 +729,11 @@ addNoteForm.addEventListener('submit', (e) => {
             updateInventoryDisplay(characterDetailsSelect.value);
         } else if (currentNoteType === 'skills') {
             updateSkillsDisplay(characterDetailsSelect.value);
+        } else if (currentNoteType === 'titles') {
+            updateTitlesDisplay(characterDetailsSelect.value);
+        } else if (currentNoteType === 'achievements') {
+            updateAchievementsDisplay(characterDetailsSelect.value);
         }
-        
         // Reset the form and hide the modal
         addNoteForm.reset();
         saveGameState();
@@ -750,15 +764,17 @@ characterDetailsSelect.addEventListener('change', updateCharacterDetails);
 
 function addNoteModalHandler(type, item, itemId) {
     console.log('Adding note modal handler called.');
+    console.log(typeof itemId + "TYPE OF ID")
     currentNoteType = type;
     currentNoteItem = item;
-    currentNoteId = itemId
+    currentNoteId = itemId;
     currentNoteCharacter = selectedCharacter
     if(currentNoteId === undefined){
         currentNoteId = 1
     }
-    console.log('Current note type:', currentNoteType);
-    console.log('Current note item:', currentNoteItem);
+    console.log('Current note type:', currentNoteType, typeof currentNoteType);
+    console.log('Current note item:', currentNoteItem, typeof currentNoteItem);
+    console.log('Current note id:', currentNoteId, typeof currentNoteId);
     addNoteModal.style.display = "block";
     saveGameState();
     
@@ -776,6 +792,7 @@ function readNotesModalHandler(type, item, itemId) {
     console.log (selectedCharacter)
     console.log('Current note type:', currentNoteType);
     console.log('Current note item:', currentNoteItem);
+    console.log('Current note id:', currentNoteId);
     const itemNotes = notes[currentNoteType][currentNoteItem][currentNoteId] || [];
     
     // Prepare HTML for displaying notes
@@ -1288,8 +1305,8 @@ function removefromSelect(name, type) {
             break;
         case "achievements":
             const achievementIndex = achievements.findIndex(a => a.name === name.name);
-            if (titleIndex !== -1) {
-                titles.splice(achievementIndex, 1);
+            if (achievementIndex !== -1) {
+                achievements.splice(achievementIndex, 1);
             }
             break;
         default:
@@ -1318,6 +1335,7 @@ document.querySelectorAll('.sidebar a').forEach(link => {
 
 document.addEventListener("DOMContentLoaded", function() {
     // Your existing code here
+    //TODO: Make sure all things that are clickable also react to touches, just like here.
     headers.forEach(header => {
         header.addEventListener("click", function() {
             const targetId = header.getAttribute("data-target");
