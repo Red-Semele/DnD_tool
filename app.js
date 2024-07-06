@@ -17,6 +17,7 @@ const inventoryList = document.getElementById('inventory-list');
 const skillsList = document.getElementById('skills-list');
 const achievementsList = document.getElementById('achievement-list');
 const titlesList = document.getElementById('title-list');
+const statsList = document.getElementById('stat-list');
 const bestLoadoutResult = document.getElementById('best-loadout-result');
 
 const addNoteModal = document.getElementById('add-note-modal');
@@ -54,6 +55,8 @@ const achievements = []; // Array to store achievements
 const characterTitles = {}; // Object to map characters to their titles
 const characterAchievements = {}; // Object to map characters to their achievements
 const characters = [];
+const stats = [];
+const characterStats = {};
 const items = [];
 const skills = [];
 const inventory = {};
@@ -77,7 +80,7 @@ document.getElementById('title-list').style.display = "none";
 document.getElementById('achievement-list').style.display = "none";
 document.getElementById('inventory-list').style.display = "none";
 document.getElementById('skills-list').style.display = "none";
-
+document.getElementById('add-stat-button').addEventListener('click', addStatHandler);
 document.addEventListener('DOMContentLoaded', loadGameState);
 // Helper Functions
 function saveGameState() {
@@ -91,6 +94,8 @@ function saveGameState() {
         characterTitles,
         achievements,
         characterAchievements,
+        stats, 
+        characterStats,
         notes,
         characterFolders,
         selectedCharacter, 
@@ -142,6 +147,8 @@ function loadGameState() {
                     case 'characterAchievements':
                     case 'characterTitles':
                     case 'titles':
+                    case 'stats':
+                    case 'characterStats':
                     //case 'custom':
                     case 'notes':
                     case 'customFolders':
@@ -332,11 +339,13 @@ function updateSkillsDisplay(character) {
 
 function updateCharacterDetails() {
     console.log("F")
-    const selectedCharacter = characterDetailsSelect.value;
+    console.log("Change detected")
+    selectedCharacter = characterDetailsSelect.value;
     updateInventoryDisplay(selectedCharacter);
     updateSkillsDisplay(selectedCharacter);
     updateTitlesDisplay(selectedCharacter) 
     updateAchievementsDisplay(selectedCharacter)
+    updateCharacterStatsDisplay(selectedCharacter);
     attachDragAndDropHandlers();
 }
 
@@ -355,6 +364,7 @@ addCharacterForm.addEventListener('submit', (e) => {
         characterFolders[characterName] = [];
         characterAchievements[characterName] = [];
         characterTitles[characterName] = [];
+        initializeCharacterStats(characterName)
         updateCharacterSelects();
     }
     addCharacterForm.reset();
@@ -1368,4 +1378,78 @@ function characterDetailRevealList(target) {
         target.style.display = "none";
         console.log ("You are right!")
     }
+}
+
+function initializeCharacterStats(character) {
+    if (!characterStats[character]) {
+        characterStats[character] = {};
+        stats.forEach(stat => {
+            if (!(stat in characterStats[character])) {
+                characterStats[character][stat] = 0;
+            }
+        });
+    }
+}
+
+function initializeCharacterStats(character) {
+    if (!characterStats[character]) {
+        characterStats[character] = {};
+        stats.forEach(stat => {
+            if (!(stat in characterStats[character])) {
+                characterStats[character][stat] = 0;
+            }
+        });
+    }
+}
+
+function addStatHandler() {
+    const statName = document.getElementById('stat-name').value.trim();
+    let statValue = parseInt(document.getElementById('stat-value').value.trim(), 10);
+    
+    if (!statName || isNaN(statValue)) return;
+    
+    if (stats.includes(statName)) {
+        alert('Stat name already exists');
+        return;
+    }
+    
+    stats.push(statName);
+    for (let character in characterStats) {
+        characterStats[character][statName] = 0;
+    }
+    
+    initializeCharacterStats(selectedCharacter);
+    characterStats[selectedCharacter][statName] = statValue;
+    
+    updateCharacterStatsDisplay(selectedCharacter);
+    saveGameState();
+}
+
+function updateCharacterStatsDisplay(character) {
+    if (!character) return;
+    
+    initializeCharacterStats(character);
+    
+    let statsHtml = '';
+    stats.forEach(stat => {
+        let value = characterStats[character][stat];
+        statsHtml += generateStatItemHtml(stat, value);
+    });
+    
+    statsList.innerHTML = statsHtml ? `<ul>${statsHtml}</ul>` : 'No stats';
+}
+
+function generateStatItemHtml(stat, value) {
+    return `
+        <li class="stat-item">
+            ${stat}: <input type="number" value="${value}" onchange="updateStat('${stat}', this.value)">
+        </li>`;
+}
+
+function updateStat(stat, value) {
+    if (!selectedCharacter || !characterStats[selectedCharacter]) return;
+    console.log("Selected Char" + selectedCharacter)
+    characterStats[selectedCharacter][stat] = parseInt(value, 10);
+    updateCharacterStatsDisplay(selectedCharacter);
+    saveGameState();
 }
