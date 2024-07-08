@@ -47,6 +47,9 @@ const addFolderModal = document.getElementById('add-folder-modal');
 const addFolderClose = document.getElementById('add-folder-close');
 const addFolderForm = document.getElementById('add-folder-form');
 const foldersList = document.getElementById('folders-list');
+const statGraphSelect = document.getElementById('statGraphSelect');
+const characterGraphSelect = document.getElementById('characterGraphSelect');
+const modeGraphSelect = document.getElementById('modeGraphSelect');
 const customFolders = [];
 const headers = document.querySelectorAll(".toggle-header");
 
@@ -82,6 +85,27 @@ document.getElementById('inventory-list').style.display = "none";
 document.getElementById('skills-list').style.display = "none";
 document.getElementById('add-stat-button').addEventListener('click', addStatHandler);
 document.addEventListener('DOMContentLoaded', loadGameState);
+const ctx = document.getElementById('myChart');
+// Initial data
+const initialData = {
+    labels: [],
+    datasets: [{
+      label: 'My First Dataset', //TODO: Give this a different name, prefarbly something dynamically changeable.
+      data: [],
+      backgroundColor: [],
+      hoverOffset: 4
+    }]
+
+  }
+
+const colors = [
+'rgb(75, 192, 192)',
+'rgb(153, 102, 255)',
+'rgb(255, 159, 64)',
+'rgb(255, 99, 132)',
+'rgb(54, 162, 235)',
+'rgb(255, 205, 86)'
+];
 // Helper Functions
 function saveGameState() {
     const gameState = {
@@ -259,7 +283,7 @@ function updateCharacterSelects() {
     characterDetailsSelect.innerHTML = characterOptions;
     assignAchievementCharacterSelect.innerHTML = characterOptions;
     assignTitleCharacterSelect.innerHTML = characterOptions;
-    console.log("Test1")
+    updateCharacterStatsSelect();
     console.log(assignAchievementCharacterSelect)
     console.log(assignTitleCharacterSelect)
 
@@ -365,6 +389,7 @@ addCharacterForm.addEventListener('submit', (e) => {
         characterAchievements[characterName] = [];
         characterTitles[characterName] = [];
         initializeCharacterStats(characterName)
+        updateCharacterStatsSelect();
         updateCharacterSelects();
     }
     addCharacterForm.reset();
@@ -372,6 +397,7 @@ addCharacterForm.addEventListener('submit', (e) => {
 });
 
 addItemForm.addEventListener('submit', (e) => {
+    console.log("YES")
     e.preventDefault();
     const itemName = document.getElementById('item-name').value;
     const itemSlot = document.getElementById('item-slot').value.trim();
@@ -559,6 +585,7 @@ assignTitleForm.addEventListener('submit', (e) => {
 
 console.log (addAchievementForm + "Achievement")
 addAchievementForm.addEventListener('submit', (e) => {
+    console.log("EE")
     e.preventDefault();
     const achievementName = document.getElementById('achievement-name').value;
     const achievementDescription = document.getElementById('achievement-description').value;
@@ -1422,21 +1449,25 @@ function addStatHandler() {
     characterStats[selectedCharacter][statName] = statValue;
     
     updateCharacterStatsDisplay(selectedCharacter);
+    updateCharacterStatsSelect()
     saveGameState();
 }
 
 function updateCharacterStatsDisplay(character) {
+    console.log("Test1")
     if (!character) return;
-    
+    console.log("Test2")
     initializeCharacterStats(character);
     
     let statsHtml = '';
     stats.forEach(stat => {
+        console.log("Test3")
         let value = characterStats[character][stat];
         statsHtml += generateStatItemHtml(stat, value);
     });
     
     statsList.innerHTML = statsHtml ? `<ul>${statsHtml}</ul>` : 'No stats';
+    console.log("No stats")
 }
 
 function generateStatItemHtml(stat, value) {
@@ -1453,3 +1484,77 @@ function updateStat(stat, value) {
     updateCharacterStatsDisplay(selectedCharacter);
     saveGameState();
 }
+
+function createGraph() {
+    updateCharacterStatsDisplay()
+    console.log("Created Graph")
+    console.log(modeGraphSelect.value)
+    myChart.data.labels = [];
+    myChart.data.datasets[0].data = [];
+    myChart.data.datasets[0].backgroundColor = [];
+    colorIndex = 0
+    if (modeGraphSelect.value === "charactersStat") {
+        characters.forEach(character => {
+            console.log("Stats" + characterStats[character][statGraphSelect.value])
+            console.log(statGraphSelect.value)
+            console.log(document.getElementById('statGraphSelect').value)
+            console.log(document.getElementById('statGraphSelect').text)
+            addData(character, characterStats[character][statGraphSelect.value], getNextColor())
+        })
+    } else if (modeGraphSelect.value === "characterStats") {
+        console.log("Character name: " + characterStats[characterGraphSelect.value]);
+        console.log("Character name: " + JSON.stringify(characterStats[characterGraphSelect.value]));
+
+        let characterStatsObj = characterStats[characterGraphSelect.value];
+        for (let stat in characterStatsObj) {
+            if (characterStatsObj.hasOwnProperty(stat)) {
+                addData(stat, characterStatsObj[stat], getNextColor());
+            }
+        }
+    }
+}
+
+function getNextColor() {
+    const color = colors[colorIndex]; // Get the color at the current index
+    colorIndex = (colorIndex + 1) % colors.length; // Increment index and reset if it exceeds the length of the colors array
+    return color;
+
+  }
+
+  function addData(label, data, color) {
+    console.log("Added data to graph")
+    // Add label to the labels array
+    myChart.data.labels.push(label);
+    // Add data to the data array
+    myChart.data.datasets[0].data.push(data);
+    // Add color to the backgroundColor array
+    myChart.data.datasets[0].backgroundColor.push(color);
+    // Update the chart
+    myChart.update();
+  }
+
+  
+  function updateCharacterStatsSelect() {
+    const selectElement = document.getElementById('statGraphSelect');
+    const selectElement2 = document.getElementById('characterGraphSelect');
+    selectElement.textContent = ''; // Clear existing options
+
+    stats.forEach(stat => {
+        const option = document.createElement('option');
+        console.log(stat)
+        option.value = stat;
+        option.textContent = stat;
+        selectElement.appendChild(option);
+        console.log("Stat assigned")
+    });
+
+    characters.forEach(character => {
+        const option = document.createElement('option');
+        console.log(character)
+        option.value = character;
+        option.textContent = character;
+        selectElement2.appendChild(option);
+        console.log("Name assigned")
+    });
+
+  }

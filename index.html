@@ -173,6 +173,7 @@
             <a href="#" data-target="customNotes">Write notes</a>
             <a href="#" data-target="saveStuff">Save stuff</a>
             <a href="#" data-target="statAdd">Add stat</a>
+            <a href="#" data-target="statGraph">Stat graph</a>
         </details>
     </div>
     <div class="container">
@@ -188,12 +189,14 @@
 
         <div class="section" id="statAdd">
             <h2>Add Stat</h2>
-            <form id="add-item-form">
+            <form id="add-stat-form">
                 <input type="text" id="stat-name" placeholder="Stat Name">
                 <input type="number" id="stat-value" placeholder="Stat Value">
                 <button id="add-stat-button">Add Stat</button>
             </form>
         </div>
+
+       
         
         <div class="section" id="itemAdd">
             <h2>Add Item</h2>
@@ -295,6 +298,22 @@
                 <div id="achievement-list" class="toggle-list"></div>
             </div>
         </div>
+
+        <div class="section" id="statGraph">
+            <label for="modeGraphSelect">Check who's stats?</label>
+            <select id="modeGraphSelect">
+                <option value="characterStats">Check 1 character's stats</option>
+                <option value="charactersStat">Compare 1 stat between characters</option>
+            </select>
+            <label for="characterGraphSelect">Check which character?</label>
+            <select id="characterGraphSelect"></select>
+            <label for="characterGraphSelect">Check what stat?</label>
+            <select id="statGraphSelect"></select>
+            <button onclick="createGraph()">Create Graph</button>
+            <div style="height: 300px">
+            <canvas id="myChart" width="100" height="100"></canvas>
+            </div>
+        </div>
         
         <div class="section" id="characterLoadout">
             <h2>Best Loadout</h2>
@@ -366,11 +385,20 @@
     </div>
 
     <script src="app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
         document.querySelector('.toggle-button').addEventListener('click', function() {
             document.body.classList.toggle('sidebar-visible');
         });
+        const myChart = new Chart(ctx, {
+          type: 'pie',
+          data: initialData,
+          options: {
+            responsive: true,
+            maintainAspectRatio: false
+          }
+        })
     </script>
 </body>
 </html>
