@@ -52,6 +52,7 @@ const characterGraphSelect = document.getElementById('characterGraphSelect');
 const modeGraphSelect = document.getElementById('modeGraphSelect');
 const customFolders = [];
 const headers = document.querySelectorAll(".toggle-header");
+let savedState = localStorage.getItem('gameState');
 
 const titles = []; // Array to store titles
 const achievements = []; // Array to store achievements
@@ -64,6 +65,8 @@ const items = [];
 const skills = [];
 const inventory = {};
 const characterSkills = {};
+const itemNotes = [];
+let note = '';
 const notes = {
     items: {},
     skills: {},
@@ -75,6 +78,7 @@ const notes = {
 let currentNoteType = '';
 let currentNoteItem = '';
 let currentNoteId = '';
+
 
 // Folder data structure
 //const folders = [];
@@ -120,19 +124,30 @@ function saveGameState() {
         characterAchievements,
         stats, 
         characterStats,
+        currentNoteType,
+        currentNoteItem,
+        currentNoteId,
         notes,
+        itemNotes,
         characterFolders,
         selectedCharacter, 
         customFolders
     };
+    console.dir(notes, { depth: null });
     localStorage.setItem('gameState', JSON.stringify(gameState));
     console.log("Save-attempted")
     console.log(gameState)
+    console.log("Saving notes:", JSON.stringify(notes, null, 2));
+
+    console.dir(notes, { depth: null });
+    logAllNotes()
 }
 
 function loadGameState() {
-    console.log("Attempting to load game state");
+    console.log("Attempting to load game state (RESET)");
     const savedState = localStorage.getItem('gameState');
+    
+    logAllNotes();
     if (savedState) {
         const gameState = JSON.parse(savedState);
         
@@ -145,7 +160,8 @@ function loadGameState() {
         function updateData(target, source) {
             // Handle arrays
             if (Array.isArray(target)) {
-                target.splice(0, target.length, ...source);
+                target.length = 0;  // Clear the existing array
+                target.push(...source);  // Push new elements
             }
             // Handle objects
             else if (typeof target === 'object' && target !== null) {
@@ -173,13 +189,23 @@ function loadGameState() {
                     case 'titles':
                     case 'stats':
                     case 'characterStats':
-                    //case 'custom':
                     case 'notes':
+                    case 'itemNotes':
                     case 'customFolders':
                         updateData(eval(prop), deepClone(gameState[prop]));
                         break;
+                    
                     case 'selectedCharacter':
                         selectedCharacter = gameState[prop];
+                        break;
+                    case 'currentNoteType':
+                        currentNoteType = gameState[prop];
+                        break;
+                    case 'currentNoteItem':
+                        currentNoteItem = gameState[prop];
+                        break;
+                    case 'currentNoteId':
+                        currentNoteId = gameState[prop];
                         break;
                     default:
                         // Handle additional properties if needed
@@ -188,6 +214,7 @@ function loadGameState() {
             }
         }
 
+        console.dir(notes, { depth: null });
         // Update UI or perform additional actions as needed
         updateCharacterSelects();
         updateItemSelect();
@@ -200,9 +227,17 @@ function loadGameState() {
         }
 
         console.log("Game state loaded successfully");
+        if (itemNotes.length === 0) {
+            console.log("itemNotes got RESET here upon reload." + JSON.stringify(notes));
+        } else {
+            console.log("Stuff" + currentNoteType + currentNoteItem + currentNoteId) //TODO: In this case both currentnotetype, item and id are empty, fix this somehow
+            console.log("no reset" + JSON.stringify(itemNotes) + JSON.stringify(notes[currentNoteType][currentNoteItem][currentNoteId]) )
+        }
     } else {
         console.log("No saved game state found");
     }
+
+    console.log("Loading notes:", JSON.stringify(notes, null, 2));
 }
 //TODO: Make it so that you don't need to reload the game to clear everything.
 function eraseGameState() {
@@ -269,6 +304,7 @@ function addFolderItemHandler(folderName) {
     const itemDescription = prompt('Enter note description:');
     if (itemName && itemDescription) {
         customFolder.items.push({ name: itemName, description: itemDescription, id: folderName });
+        console.log(JSON.stringify(customFolder) + "CustomFolder" + JSON.stringify(customFolders))
         notes.custom[itemName] = []
         updateFoldersDisplay();
         saveGameState();
@@ -473,9 +509,9 @@ assignItemForm.addEventListener('submit', (e) => {
     });
     console.log("Id " + item.id)
     if (removeItem) {
-        removefromSelect(item, "items"); //TODO: Add 1 function called this that can remove items, skills, achievements and titles.
+        removefromSelect(item, "items");
     }
-
+    notes.items[itemName][newId] = []; //TODO: Check if this works
     //inventory[character].push(item);
     
     if (characterDetailsSelect.value === character) {
@@ -508,7 +544,7 @@ assignSkillForm.addEventListener('submit', (e) => {
     const skillId = `${character}`;
     skill.id = skillId; // Assign the generated ID to the skill
     console.log(skill.id + "SkillId")
-    
+    //notes.skills[skillName][skillId] = [];
     characterSkills[character].push(skill);
     if (removeSkill) {
         removefromSelect(skill, "skills");
@@ -755,14 +791,11 @@ addNoteForm.addEventListener('submit', (e) => {
     const noteContent = document.getElementById('note-content').value;
     
     // Ensure currentNoteType and currentNoteItem are set correctly
-    if (currentNoteType && currentNoteItem) {
-        console.log(currentNoteItem + " NoteItem and Id" + currentNoteId + "Type" + currentNoteType)
-        console.log(notes[currentNoteType][currentNoteItem][currentNoteId])
-        if (!notes[currentNoteType][currentNoteItem][currentNoteId]) {
-            notes[currentNoteType][currentNoteItem][currentNoteId] = [];
-            console.log(notes[currentNoteType][currentNoteItem][currentNoteId])
-        }
-        notes[currentNoteType][currentNoteItem][currentNoteId].push({ title: noteTitle, content: noteContent });
+    if (currentNoteType && currentNoteItem && currentNoteId) {
+        const noteId = generateNoteId(currentNoteType, currentNoteItem, currentNoteId);
+        itemNotes.push({ id: noteId, title: noteTitle, content: noteContent });
+        console.log( "RESET TEST" + JSON.stringify(notes[currentNoteType][currentNoteItem][currentNoteId]) + JSON.stringify(notes[currentNoteType]) + currentNoteType + currentNoteItem + currentNoteId)
+        console.dir(notes, { depth: null });
         
         // Update UI to reflect the newly added note
         if (currentNoteType === 'items') {
@@ -782,6 +815,11 @@ addNoteForm.addEventListener('submit', (e) => {
         console.error('Error adding note: Current note type or item not set.');
     }
 });
+
+function generateNoteId(noteType, noteItem, noteId) {
+    return `${noteType}-${noteItem}-${noteId}`;
+}
+
 
 addNoteClose.onclick = () => {
     addNoteModal.style.display = "none";
@@ -803,8 +841,9 @@ window.onclick = (event) => {
 characterDetailsSelect.addEventListener('change', updateCharacterDetails);
 
 function addNoteModalHandler(type, item, itemId) {
-    console.log('Adding note modal handler called.');
+    
     console.log(typeof itemId + "TYPE OF ID")
+    console.log("ITEMTEST" + JSON.stringify(itemNotes))
     currentNoteType = type;
     currentNoteItem = item;
     currentNoteId = itemId;
@@ -812,10 +851,10 @@ function addNoteModalHandler(type, item, itemId) {
     if(currentNoteId === undefined){
         currentNoteId = 1
     }
-    console.log('Current note type:', currentNoteType, typeof currentNoteType);
-    console.log('Current note item:', currentNoteItem, typeof currentNoteItem);
-    console.log('Current note id:', currentNoteId, typeof currentNoteId);
     addNoteModal.style.display = "block";
+    console.log('Adding note modal handler called.' + JSON.stringify(itemNotes));
+    console.log("ITEMTEST" + JSON.stringify(itemNotes))
+    console.log("NOTETEST" + JSON.stringify(notes[currentNoteType][currentNoteItem][currentNoteId]))
     saveGameState();
     
 }
@@ -826,31 +865,95 @@ function readNotesModalHandler(type, item, itemId) {
     currentNoteItem = item;
     currentNoteId = itemId;
     currentNoteCharacter = selectedCharacter
+    
     if(currentNoteId === undefined){
         currentNoteId = 1
     }
     console.log (selectedCharacter)
-    console.log('Current note type:', currentNoteType);
-    console.log('Current note item:', currentNoteItem);
-    console.log('Current note id:', currentNoteId);
-    const itemNotes = notes[currentNoteType][currentNoteItem][currentNoteId] || [];
+    console.log("itemNotes got RESET here. Read" + JSON.stringify(itemNotes) + currentNoteType + currentNoteItem + currentNoteId + "Notes" + JSON.stringify(notes[currentNoteType][currentNoteItem][currentNoteId]))
+    const noteId = generateNoteId(currentNoteType, currentNoteItem, currentNoteId);
+    const notesToDisplay = itemNotes.filter(note => note.id === noteId);
     
     // Prepare HTML for displaying notes
-    notesList.innerHTML = itemNotes.map((note, index) => `<p class="note-title" onclick="showNoteDetails(${index})">${note.title}</p>`).join('');
+    notesList.innerHTML = notesToDisplay.map((note, index) => `<p class="note-title" onclick="showNoteDetails(${index})">${note.title}</p>`).join('');
     
     // Show the read notes modal
     noteDetails.style.display = "none"; // Ensure details are initially hidden
     readNotesModal.style.display = "block";
+    saveGameState();
 }
 
 function showNoteDetails(index) {
     console.log("M")
-    const itemNotes = notes[currentNoteType][currentNoteItem][currentNoteId] || [];
-    const note = itemNotes[index];
+
+    const noteId = generateNoteId(currentNoteType, currentNoteItem, currentNoteId);
+    const notesToDisplay = itemNotes.filter(note => note.id === noteId);
+    const note = notesToDisplay[index];
+    
     noteTitleDisplay.innerHTML = note.title;
     noteContentDisplay.innerHTML = note.content;
     noteDetails.style.display = "block";
+    noteDetails.setAttribute('data-note-index', index);
+    saveGameState();
 }
+
+function editNote() {
+    const index = noteDetails.getAttribute('data-note-index');
+    const noteId = generateNoteId(currentNoteType, currentNoteItem, currentNoteId);
+    const notesToDisplay = itemNotes.filter(note => note.id === noteId);
+    const note = notesToDisplay[index];
+
+    // Populate the add note form with the current note details for editing
+    console.log(note.title + note.content)
+    document.getElementById('note-title').value = note.title;
+    document.getElementById('note-content').value = note.content;
+
+    // Show the add note modal
+    readNotesModal.style.display = "none";
+    addNoteModal.style.display = "block";
+
+    // Remove the note from the list so it can be replaced by the edited version
+    const originalIndex = itemNotes.findIndex(n => n.id === noteId && n.title === note.title && n.content === note.content);
+    if (originalIndex !== -1) {
+        itemNotes.splice(originalIndex, 1);
+    }
+    saveGameState();
+
+    // Optionally, store the index in a global variable if you need to keep track of the original position
+}
+
+function deleteNote() {
+    const index = noteDetails.getAttribute('data-note-index');
+    const noteId = generateNoteId(currentNoteType, currentNoteItem, currentNoteId);
+    const notesToDisplay = itemNotes.filter(note => note.id === noteId);
+    const note = notesToDisplay[index];
+    
+    // Remove the note from the original array
+    const originalIndex = itemNotes.findIndex(n => n.id === noteId && n.title === note.title && n.content === note.content);
+    if (originalIndex !== -1) {
+        itemNotes.splice(originalIndex, 1);
+    }
+
+    // Hide the note details section
+    noteDetails.style.display = "none";
+    readNotesModalHandler(currentNoteType, currentNoteItem, currentNoteId);
+    noteDetails.style.display = "none";
+
+    // Save the updated game state
+    saveGameState();
+}
+
+// Ensure the modals close on clicking outside
+window.onclick = (event) => {
+    if (event.target == addNoteModal) {
+        addNoteModal.style.display = "none";
+    }
+    if (event.target == readNotesModal) {
+        readNotesModal.style.display = "none";
+    }
+}
+
+
 
 function generateInventoryItemHtml(item) {
     console.log("N");
@@ -1558,3 +1661,27 @@ function getNextColor() {
     });
 
   }
+
+  function logAllNotes() {
+    console.log('Logging all notes:');
+    for (const itemType in note) {
+        if (notes.hasOwnProperty(itemType)) {
+            console.log(`ItemType: ${itemType}`);
+            for (const itemName in notes[itemType]) {
+                if (notes[itemType].hasOwnProperty(itemName)) {
+                    console.log(`  ItemName: ${itemName}`);
+                    for (const itemId in notes[itemType][itemName]) {
+                        if (notes[itemType][itemName].hasOwnProperty(itemId)) {
+                            console.log(`    ItemId: ${itemId}`);
+                            const itemNotes = notes[itemType][itemName][itemId];
+                            itemNotes.forEach((note, index) => {
+                                console.log(`      Note ${index + 1}: ${note.title} - ${note.content}`);
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
