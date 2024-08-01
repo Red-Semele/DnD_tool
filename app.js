@@ -237,7 +237,7 @@ function loadGameState() {
         console.log("No saved game state found");
     }
 
-    console.log("Loading notes:", JSON.stringify(notes, null, 2));
+    console.log("Loading notes:", JSON.stringify(characterSkills));
 }
 //TODO: Make it so that you don't need to reload the game to clear everything.
 function eraseGameState() {
@@ -1035,15 +1035,25 @@ function handleQuantityChange(event, itemName, itemId) {
 }
 
 function generateSkillItemHtml(skill) {
-    console.log("skill" + skill)
+    const escapedSkillName = skill.name.replace("'", "\\'");
+    const hasLastRoll = !!skill.lastRoll;
+
     return `
-        <li class="draggable-skill" draggable="true" data-skill-name="${skill.name}">
+         <li class="draggable-skill" draggable="true" data-skill-name="${skill.name}">
             ${skill.name} - ${skill.description}
-            <button onclick="console.log('Clicked + button for skill:', '${skill.name.replace("'", "\\'")}', '${skill.id}'); addNoteModalHandler('skills', '${skill.name.replace("'", "\\'")}', '${skill.id}')">+</button>
-            <button onclick="console.log('Clicked Read Notes button for skill:', '${skill.name.replace("'", "\\'")}', '${skill.id}'); readNotesModalHandler('skills', '${skill.name.replace("'", "\\'")}', '${skill.id}')">Read Notes</button>
-            <button id="add-roll-${skill.name.replace("'", "\\'")}" onclick="console.log('Clicked Add Roll button for skill:', '${skill.name.replace("'", "\\'")}'); addRoll('${skill.name.replace("'", "\\'")}')">Add Roll</button>
-            <button id="perform-${skill.name.replace("'", "\\'")}" style="display:none;" onclick="console.log(this.id + 'Clicked Perform button for skill:', '${skill.name.replace("'", "\\'")}'); performRoll('${skill.name.replace("'", "\\'")}', '${skill.lastRoll}')">Perform</button>
-            <button id="edit-${skill.name.replace("'", "\\'")}" style="display:none;" onclick="editRoll('${skill.name.replace("'", "\\'")}')">Edit Roll</button>
+            <button onclick="console.log('Clicked + button for skill:', '${escapedSkillName}', '${skill.id}'); addNoteModalHandler('skills', '${escapedSkillName}', '${skill.id}')">+</button>
+            <button onclick="console.log('Clicked Read Notes button for skill:', '${escapedSkillName}', '${skill.id}'); readNotesModalHandler('skills', '${escapedSkillName}', '${skill.id}')">Read Notes</button>
+            
+            <button id="add-roll-${escapedSkillName}" onclick="console.log('Clicked Add Roll button for skill:', '${escapedSkillName}'); addRoll('${escapedSkillName}')" style="${hasLastRoll ? 'display:none;' : 'display:inline-block;'}">Add Roll</button>
+            <label style="${hasLastRoll ? 'display:none;' : 'display:inline-block;'}">
+                <input type="checkbox" id="global-add-roll-${escapedSkillName}" /> Add to all asigned versions of this ability
+            </label>
+            
+            <button id="perform-${escapedSkillName}" style="${hasLastRoll ? 'display:inline-block;' : 'display:none;'}" onclick="console.log(this.id + 'Clicked Perform button for skill:', '${escapedSkillName}'); performRoll('${escapedSkillName}', '${skill.lastRoll}')">Perform</button>
+            <button id="edit-${escapedSkillName}" style="${hasLastRoll ? 'display:inline-block;' : 'display:none;'}" onclick="editRoll('${escapedSkillName}')">Edit Roll</button>
+            <label style="${hasLastRoll ? 'display:inline-block;' : 'display:none;'}">
+                <input type="checkbox" id="global-edit-roll-${escapedSkillName}" /> Apply edit to all
+            </label>
         </li>`;
 }
 
@@ -1252,75 +1262,82 @@ rollDiceForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const diceInput = document.getElementById('dice-input').value.trim();
 
-    // Revised regex to match dice notation allowing for spaces
-    const diceRegex = /^(\d+)d(\d+)(\s*([\+\-\*\/])\s*(\d+))?$/;
-    const match = diceInput.match(diceRegex);
+    // Regex to match dice notations (e.g., 2d6, 5d20)
+    const diceNotationRegex = /(\d+)d(\d+)/g;
 
-    if (match) {
+    // Extract all dice notations
+    let diceGroups = [];
+    let match;
+
+    while ((match = diceNotationRegex.exec(diceInput)) !== null) {
         const numDice = parseInt(match[1]);
         const diceType = parseInt(match[2]);
-        let modifierType = match[4]; // Operator (+, -, *, /)
-        let modifierValue = match[5] ? parseInt(match[5].trim()) : 0; // Modifier value
+        diceGroups.push({ numDice, diceType });
+    }
 
-        // Roll the dice
-        let diceRolls = [];
-        let total = 0; // Initialize total to 0
+    // Function to roll dice
+    function rollDice(numDice, diceType) {
+        let rolls = [];
+        let total = 0;
         for (let i = 0; i < numDice; i++) {
             const roll = Math.floor(Math.random() * diceType) + 1;
-            diceRolls.push(roll);
+            rolls.push(roll);
             total += roll;
         }
-
-        // Prepare the result message without modifier
-        let resultMessage = `Rolled ${numDice}d${diceType} and got ${total} (${diceRolls.join(', ')})`;
-        
-        // Update UI with result without modifier
-        diceRollResult.textContent = resultMessage;
-
-        // If modifier exists, apply it
-        if (modifierType) {
-            switch (modifierType) {
-                case '+':
-                    total += modifierValue;
-                    break;
-                case '-':
-                    total -= modifierValue;
-                    break;
-                case '*':
-                    total *= modifierValue;
-                    break;
-                case '/':
-                    if (modifierValue !== 0) {
-                        total = Math.floor(total / modifierValue);
-                    } else {
-                        diceRollResult.textContent = 'Invalid dice notation. Division by zero.';
-                        return;
-                    }
-                    break;
-                default:
-                    break;
-            }
-
-            // Prepare the result message with modifier
-            resultMessage += ` (${modifierType}${modifierValue}) => Total: ${total}`;
-            
-            // Update UI with result including modifier
-            diceRollResult.textContent = resultMessage;
-            
-        }
-    } else {
-        diceRollResult.textContent = 'Invalid dice notation. Please use format like "2d6 + 6".';
+        return { rolls, total };
     }
+
+    // Roll all dice and prepare breakdown
+    let total = 0;
+    let breakdown = [];
+    let modifiedInput = diceInput;
+
+    diceGroups.forEach(group => {
+        const { numDice, diceType } = group;
+        const { rolls, total: groupTotal } = rollDice(numDice, diceType);
+
+        // Prepare breakdown message
+        let resultMessage = `Rolled ${numDice}d${diceType} and got ${groupTotal} (${rolls.join(', ')})`;
+
+        // Replace the dice notation in the input string with the rolled total
+        modifiedInput = modifiedInput.replace(`${numDice}d${diceType}`, groupTotal);
+
+        breakdown.push(resultMessage);
+    });
+
+    // Evaluate the final expression
+    let finalTotal = 0;
+    try {
+        finalTotal = eval(modifiedInput);
+    } catch (error) {
+        diceRollResult.textContent = 'Invalid dice notation or math expression.';
+        return;
+    }
+
+    // Prepare the final result message
+    let finalResultMessage = `${breakdown.join(' | ')} => Total: ${finalTotal}`;
+
+    // Update UI with all breakdowns and the final total
+    diceRollResult.textContent = finalResultMessage;
 });
 
 function addRoll(skillName) {
     const diceNotation = prompt("Enter dice notation (e.g., 2d6 + 5):");
     if (diceNotation) {
-        const skill = skills.find(s => s.name === skillName);
-        skill.lastRoll = diceNotation;
-        console.log(skills)
-        console.log(skillName)
-        console.log(skill.lastRoll)
+        const applyToAll = document.getElementById(`global-add-roll-${skillName}`).checked;
+        if (applyToAll) {
+            // Apply to all characters
+            for (let character in characterSkills) {
+                const skill = characterSkills[character].find(s => s.name === skillName);
+                if (skill) {
+                    skill.lastRoll = diceNotation;
+                }
+            }
+        } else {
+            // Apply to selected character only
+            const skill = characterSkills[selectedCharacter].find(s => s.name === skillName);
+            skill.lastRoll = diceNotation;
+        }
         const escapedSkillName = skillName.replace("'", "\\'");
         console.log(escapedSkillName)
         document.getElementById(`perform-${escapedSkillName}`).style.display = "inline-block";
@@ -1335,15 +1352,29 @@ function addRoll(skillName) {
 function editRoll(skillName) {
     const diceNotation = prompt("Enter new dice notation (e.g., 1d20 + 3):");
     if (diceNotation) {
-        const skill = skills.find(s => s.name === skillName);
-        skill.lastRoll = diceNotation;
-        console.log(`Dice notation edited for ${skillName}: ${diceNotation}`);
-        saveGameState();
+        const applyToAll = document.getElementById(`global-edit-roll-${skillName}`).checked;
+        if (applyToAll) {
+            // Apply to all characters
+            for (let character in characterSkills) {
+                const skill = characterSkills[character].find(s => s.name === skillName);
+                if (skill) {
+                    skill.lastRoll = diceNotation;
+                }
+            }
+        } else {
+            // Apply to selected character only
+            const skill = characterSkills[selectedCharacter].find(s => s.name === skillName);
+            skill.lastRoll = diceNotation;
+        }
+            console.log(`Dice notation edited for ${skillName}: ${diceNotation}`);
+            saveGameState();  // Save state after modification
+            updateSkillSelect();  // Refresh the skill list UI
     }
+
 }
 
 function performRoll(skillName) {
-    const skill = skills.find(skill => skill.name === skillName);
+    const skill = characterSkills[selectedCharacter].find(s => s.name === skillName);
     const diceNotation = skill.lastRoll;
     console.log(diceNotation);
     console.log(diceNotation)
