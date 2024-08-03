@@ -382,12 +382,25 @@
             <div id="dice-roll-result"></div>
         </div>
         <div class= "section" id="saveStuff">
-            <button onclick="eraseGameState()">Erase Save</button>
+            <button onclick="eraseGameState()">Erase Save TODO: make the stuff below be supported in this, using dice cube incremental code.</button>
+            <button onclick="resetSave()">Reset Save</button>
+            <button onclick="checkVariables()">Check Values</button>
+            <button onclick="importGameDataPrompt()">Import Save</button>
+            <div>
+              <textarea id="variableChecker" class="variable-checker" name="variableChecker" rows="15" cols="100">
+              </textarea>
+              <div>
+                <button onclick="importGameData()" id="importData">Import</button>
+                <button onclick="exportGameDataClipboard()" id="exportToClipboard">Copy to clipboard</button>
+                
+              </div>
+            </div>
         </div>
     </div>
 
     <script src="app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.js"></script>
 
     <script>
         document.querySelector('.toggle-button').addEventListener('click', function() {

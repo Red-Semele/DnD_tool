@@ -78,6 +78,8 @@ const notes = {
 let currentNoteType = '';
 let currentNoteItem = '';
 let currentNoteId = '';
+let lowest = ""
+let highest = ""
 
 
 // Folder data structure
@@ -1263,61 +1265,117 @@ rollDiceForm.addEventListener('submit', (e) => {
     const diceInput = document.getElementById('dice-input').value.trim();
 
     // Regex to match dice notations (e.g., 2d6, 5d20)
-    const diceNotationRegex = /(\d+)d(\d+)/g;
+    const diceNotationRegex = /(\d+d\d+)/g;
 
-    // Extract all dice notations
-    let diceGroups = [];
-    let match;
+    // Regex to match character attributes (e.g., Ernhart.charisma)
+    const attributeRegex = /(\w+)\.(\w+)/g;
 
-    while ((match = diceNotationRegex.exec(diceInput)) !== null) {
-        const numDice = parseInt(match[1]);
-        const diceType = parseInt(match[2]);
-        diceGroups.push({ numDice, diceType });
-    }
+    // Replace character attributes with their corresponding values
+    let modifiedInput = diceInput.replace(attributeRegex, (match, character, stat) => {
+        if (character === 'selectedCharacter') {
+            if (characterStats[selectedCharacter] && characterStats[selectedCharacter][stat] !== undefined) {
+                return characterStats[selectedCharacter][stat];
+            } else {
+                throw new Error(`Invalid attribute for selectedCharacter: ${stat}`);
+            }
+        } else {
+            if (characterStats[character] && characterStats[character][stat] !== undefined) {
+                return characterStats[character][stat];
+            } else {
+                throw new Error(`Invalid attribute: ${match}`);
+            }
+        }
+    });
 
     // Function to roll dice
     function rollDice(numDice, diceType) {
         let rolls = [];
         let total = 0;
+        lowest = diceType;
+        highest = 1;
         for (let i = 0; i < numDice; i++) {
             const roll = Math.floor(Math.random() * diceType) + 1;
             rolls.push(roll);
             total += roll;
+            if (roll < lowest) lowest = roll;
+            if (roll > highest) highest = roll;
         }
-        return { rolls, total };
+        return { rolls, total, lowest, highest };
     }
 
-    // Roll all dice and prepare breakdown
-    let total = 0;
-    let breakdown = [];
-    let modifiedInput = diceInput;
+    // Function to summarize dice rolls by counting occurrences
+    function summarizeRolls(rolls) {
+        let counts = {};
+        rolls.forEach(roll => {
+            counts[roll] = (counts[roll] || 0) + 1;
+        });
+        return Object.entries(counts).map(([roll, count]) => `${roll}: ${count}`).join(', ');
+    }
 
-    diceGroups.forEach(group => {
-        const { numDice, diceType } = group;
-        const { rolls, total: groupTotal } = rollDice(numDice, diceType);
+    // Function to evaluate nested dice notations
+    function evaluateExpression(expression) {
+        // Match and replace innermost dice notations first
+        while (diceNotationRegex.test(expression)) {
+            expression = expression.replace(diceNotationRegex, (match) => {
+                const [numDice, diceType] = match.split('d').map(Number);
+                const { total, rolls, lowest, highest } = rollDice(numDice, diceType);
+                breakdown.push(`Rolled ${numDice}d${diceType} and got ${total} (${rolls.join(', ')})`);
+                return total;
+            });
+        }
+        return eval(expression);
+    }
 
-        // Prepare breakdown message
-        let resultMessage = `Rolled ${numDice}d${diceType} and got ${groupTotal} (${rolls.join(', ')})`;
-
-        // Replace the dice notation in the input string with the rolled total
-        modifiedInput = modifiedInput.replace(`${numDice}d${diceType}`, groupTotal);
-
-        breakdown.push(resultMessage);
-    });
-
-    // Evaluate the final expression
+    // Evaluate the final expression including nested dice notations
     let finalTotal = 0;
+    let breakdown = [];
+
     try {
-        finalTotal = eval(modifiedInput);
+        const evaluatedExpression = modifiedInput.replace(/\(([^()]+)\)/g, (match, innerExp) => evaluateExpression(innerExp));
+        finalTotal = evaluateExpression(evaluatedExpression);
     } catch (error) {
         diceRollResult.textContent = 'Invalid dice notation or math expression.';
         return;
     }
 
-    // Prepare the final result message
+    // Prepare the final result message with detailed breakdown
     let finalResultMessage = `${breakdown.join(' | ')} => Total: ${finalTotal}`;
+    const maxLength = 200;  // Set your desired max length
 
-    // Update UI with all breakdowns and the final total
+    if (finalResultMessage.length > maxLength) {
+        // Shorten each breakdown to summarized rolls
+        breakdown = breakdown.map(message => {
+            const rollsMatch = message.match(/\(([^)]+)\)/);
+            if (rollsMatch) {
+                const rollsString = rollsMatch[1];
+                const rolls = rollsString.split(', ').map(Number);
+                const summary = summarizeRolls(rolls);
+                return message.replace(/\(.*\)/, `(${summary})`);
+            }
+            return message;
+        });
+        finalResultMessage = `${breakdown.join(' | ')} => Total: ${finalTotal}`;
+    }
+
+    if (finalResultMessage.length > maxLength) {
+        // Further shorten each breakdown to only the two highest and two lowest rolls
+        breakdown = breakdown.map(message => {
+            const rollsMatch = message.match(/\(([^)]+)\)/);
+            if (rollsMatch) {
+                const extremes = `Lowest: ${lowest}, Highest: ${highest}`;
+                return message.replace(/\(.*\)/, `(${extremes})`);
+            }
+            return message;
+        });
+        finalResultMessage = `${breakdown.join(' | ')} => Total: ${finalTotal}`;
+    }
+
+    if (finalResultMessage.length > maxLength) {
+        // Show only the total if still too long
+        finalResultMessage = `Total: ${finalTotal}`;
+    }
+
+    // Update UI with the final result message
     diceRollResult.textContent = finalResultMessage;
 });
 
@@ -1716,3 +1774,40 @@ function getNextColor() {
     }
 }
 
+
+//TODO: Convert this import and export code from dicecube to the dnd tool, it should mostly wpork, objects might act a little funky. Bytother than that it should mostly be fine.
+function importGameDataPrompt() {
+    var textarea = document.getElementById("variableChecker");
+    textarea.style.display = "inline-block";
+    document.getElementById("importData").style.display = "";
+    document.getElementById("exportToClipboard").style.display = "none";
+
+  }
+  function importGameData() {
+    var importData = document.getElementById("variableChecker").value;
+    var original_json = LZString.decompressFromEncodedURIComponent(importData)
+    console.log(importData)
+    console.log(LZString.decompressFromBase64(importData))
+    var loaded_game_data = JSON.parse(original_json)
+    console.log(loaded_game_data)
+    gameData = loaded_game_data
+    document.getElementById("importData").style.display = "none";
+    document.getElementById("variableChecker").style.display = "none";
+  }
+
+  function exportGameDataClipboard() {
+    var importData = document.getElementById("variableChecker").value;
+    navigator.clipboard.writeText(importData);
+    }
+
+    function checkVariables() {
+        var textarea = document.getElementById("variableChecker");
+        var json = JSON.stringify(savedState)
+        var compressed = LZString.compressToEncodedURIComponent(json); //TODO: For some reason it says that lztring is not correctly defined, no clue what this is causing.
+        console.log(compressed)
+        textarea.value = ""
+        textarea.style.display = "inline-block";
+        textarea.value += compressed;
+        document.getElementById("importData").style.display = "none";
+        document.getElementById("exportToClipboard").style.display = "";
+    }
