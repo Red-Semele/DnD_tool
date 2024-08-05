@@ -80,6 +80,7 @@ let currentNoteItem = '';
 let currentNoteId = '';
 let lowest = ""
 let highest = ""
+let sortedRolls = ""
 
 
 // Folder data structure
@@ -1264,8 +1265,8 @@ rollDiceForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const diceInput = document.getElementById('dice-input').value.trim();
 
-    // Regex to match dice notations (e.g., 2d6, 5d20)
-    const diceNotationRegex = /(\d+d\d+)/g;
+    // Updated regex to include multiples (e.g., 2d6m2, 5d20m3)
+    const diceNotationRegex = /(\d+d\d+)([khld][hld]?\d+|[khld][><=]=?\d+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(m\d+)?/g;
 
     // Regex to match character attributes (e.g., Ernhart.charisma)
     const attributeRegex = /(\w+)\.(\w+)/g;
@@ -1288,22 +1289,122 @@ rollDiceForm.addEventListener('submit', (e) => {
     });
 
     // Function to roll dice
-    function rollDice(numDice, diceType) {
+    function rollDice(numDice, diceType, modifier, successCriteria, failureCriteria, criticalSuccessCriteria, criticalFailureCriteria, multiples) {
         let rolls = [];
         let total = 0;
-        lowest = diceType;
-        highest = 1;
+    
         for (let i = 0; i < numDice; i++) {
             const roll = Math.floor(Math.random() * diceType) + 1;
             rolls.push(roll);
-            total += roll;
-            if (roll < lowest) lowest = roll;
-            if (roll > highest) highest = roll;
         }
-        return { rolls, total, lowest, highest };
+    
+        sortedRolls = [...rolls].sort((a, b) => a - b);
+    
+        if (modifier) {
+            const match = modifier.match(/([khld])([><=]=?)(\d+)/);
+            const matchOldStyle = modifier.match(/([khld])([hld])(\d+)/);
+    
+            if (match) {
+                const action = match[1];
+                const operator = match[2];
+                const value = parseInt(match[3], 10);
+    
+                switch (action) {
+                    case 'k':
+                        sortedRolls = sortedRolls.filter(roll => compare(roll, operator, value));
+                        break;
+                    case 'd':
+                        sortedRolls = sortedRolls.filter(roll => !compare(roll, operator, value));
+                        break;
+                }
+            } else if (matchOldStyle) {
+                const action = matchOldStyle[1] + matchOldStyle[2]; // 'kh', 'kl', 'dh', 'dl'
+                const count = parseInt(matchOldStyle[3], 10);
+    
+                switch (action) {
+                    case 'kh':
+                        sortedRolls = sortedRolls.slice(-count);
+                        break;
+                    case 'kl':
+                        sortedRolls = sortedRolls.slice(0, count);
+                        break;
+                    case 'dh':
+                        sortedRolls = sortedRolls.slice(0, -count);
+                        break;
+                    case 'dl':
+                        sortedRolls = sortedRolls.slice(count);
+                        break;
+                }
+            }
+        }
+    
+        // Process success criteria if present
+        let successCount = 0;
+        if (successCriteria) {
+            const successMatch = successCriteria.match(/cs([><=]=?)(\d+)/);
+            if (successMatch) {
+                const operator = successMatch[1];
+                const value = parseInt(successMatch[2], 10);
+    
+                successCount = sortedRolls.filter(roll => compare(roll, operator, value)).length;
+            }
+        }
+    
+        // Process failure criteria if present
+        let failureCount = 0;
+        if (failureCriteria) {
+            const failureMatch = failureCriteria.match(/cf([><=]=?)(\d+)/);
+            if (failureMatch) {
+                const operator = failureMatch[1];
+                const value = parseInt(failureMatch[2], 10);
+    
+                failureCount = sortedRolls.filter(roll => compare(roll, operator, value)).length;
+            }
+        }
+    
+        // Process critical success criteria if present
+        let criticalSuccessCount = 0;
+        if (criticalSuccessCriteria) {
+            const criticalSuccessMatch = criticalSuccessCriteria.match(/ccs([><=]=?)(\d+)/);
+            if (criticalSuccessMatch) {
+                const operator = criticalSuccessMatch[1];
+                const value = parseInt(criticalSuccessMatch[2], 10);
+    
+                criticalSuccessCount = sortedRolls.filter(roll => compare(roll, operator, value)).length;
+            }
+        }
+    
+        // Process critical failure criteria if present
+        let criticalFailureCount = 0;
+        if (criticalFailureCriteria) {
+            const criticalFailureMatch = criticalFailureCriteria.match(/ccf([><=]=?)(\d+)/);
+            if (criticalFailureMatch) {
+                const operator = criticalFailureMatch[1];
+                const value = parseInt(criticalFailureMatch[2], 10);
+    
+                criticalFailureCount = sortedRolls.filter(roll => compare(roll, operator, value)).length;
+            }
+        }
+    
+        // Calculate multiples if present
+        let multipleCount = 0;
+        if (multiples) {
+            const multipleMatch = multiples.match(/m(\d+)/);
+            if (multipleMatch) {
+                const numMultiples = parseInt(multipleMatch[1], 10);
+                const rollCounts = rolls.reduce((counts, roll) => {
+                    counts[roll] = (counts[roll] || 0) + 1;
+                    return counts;
+                }, {});
+    
+                multipleCount = Object.values(rollCounts).filter(count => count >= numMultiples).length;
+            }
+        }
+    
+        total = sortedRolls.reduce((sum, roll) => sum + roll, 0);
+        return { rolls, sortedRolls, total, successCount, failureCount, criticalSuccessCount, criticalFailureCount, multipleCount };
     }
 
-    // Function to summarize dice rolls by counting occurrences
     function summarizeRolls(rolls) {
         let counts = {};
         rolls.forEach(roll => {
@@ -1316,14 +1417,47 @@ rollDiceForm.addEventListener('submit', (e) => {
     function evaluateExpression(expression) {
         // Match and replace innermost dice notations first
         while (diceNotationRegex.test(expression)) {
-            expression = expression.replace(diceNotationRegex, (match) => {
-                const [numDice, diceType] = match.split('d').map(Number);
-                const { total, rolls, lowest, highest } = rollDice(numDice, diceType);
-                breakdown.push(`Rolled ${numDice}d${diceType} and got ${total} (${rolls.join(', ')})`);
-                return total;
+            expression = expression.replace(diceNotationRegex, (match, diceNotation, modifier, successCriteria, failureCriteria, criticalSuccessCriteria, criticalFailureCriteria, multiples) => {
+                const [numDice, diceType] = diceNotation.split('d').map(Number);
+                const result = rollDice(numDice, diceType, modifier, successCriteria, failureCriteria, criticalSuccessCriteria, criticalFailureCriteria, multiples);
+                let resultValue = result.total;
+    
+                if (successCriteria) {
+                    resultValue = result.successCount;
+                } else if (failureCriteria) {
+                    resultValue = result.failureCount;
+                } else if (criticalSuccessCriteria) {
+                    resultValue = result.criticalSuccessCount;
+                } else if (criticalFailureCriteria) {
+                    resultValue = result.criticalFailureCount;
+                } else if (multiples) {
+                    resultValue = result.multipleCount;
+                }
+    
+                breakdown.push(`Rolled ${diceNotation}${modifier ? ' ' + modifier : ''}${successCriteria ? ' ' + successCriteria : ''}${failureCriteria ? ' ' + failureCriteria : ''}${criticalSuccessCriteria ? ' ' + criticalSuccessCriteria : ''}${criticalFailureCriteria ? ' ' + criticalFailureCriteria : ''}${multiples ? ' ' + multiples : ''} and got ${resultValue} (${result.rolls.join(', ')})`);
+                return resultValue;
             });
         }
         return eval(expression);
+    }
+
+    // Helper function to compare values based on operator
+    function compare(roll, operator, value) {
+        switch (operator) {
+            case '>':
+                return roll > value;
+            case '>=':
+                return roll >= value;
+            case '<':
+                return roll < value;
+            case '<=':
+                return roll <= value;
+            case '=':
+            case '==':
+                return roll === value;
+            default:
+                return false;
+        }
     }
 
     // Evaluate the final expression including nested dice notations
@@ -1362,7 +1496,7 @@ rollDiceForm.addEventListener('submit', (e) => {
         breakdown = breakdown.map(message => {
             const rollsMatch = message.match(/\(([^)]+)\)/);
             if (rollsMatch) {
-                const extremes = `Lowest: ${lowest}, Highest: ${highest}`;
+                const extremes = `Lowest: ${sortedRolls[0]}, Highest: ${sortedRolls[sortedRolls.length - 1]}`;
                 return message.replace(/\(.*\)/, `(${extremes})`);
             }
             return message;
@@ -1454,6 +1588,7 @@ function performRoll(skillName) {
 }
 
 function rollDice(numDice, diceType, modifierType, modifierValue) {
+    //TODO: Remove this function later as its a weaker duplicate of a better function.
     let total = 0;
     for (let i = 0; i < numDice; i++) {
         const roll = Math.floor(Math.random() * diceType) + 1;
