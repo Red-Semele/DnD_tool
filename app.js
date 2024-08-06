@@ -1263,13 +1263,28 @@ function updateSelect(type) {
 
 rollDiceForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    const diceInput = document.getElementById('dice-input').value.trim();
+    diceLogic('noSkill')
+  
+});
 
+function diceLogic(skillCalled) {
+    let diceInput = ""
+    
+    if (skillCalled === 'noSkill') {
+        diceInput = document.getElementById('dice-input').value.trim();
+    } else {
+        const skill = characterSkills[selectedCharacter].find(s => s.name === skillCalled);
+        diceInput = skill.lastRoll
+    }
     // Updated regex to include multiples (e.g., 2d6m2, 5d20m3)
     const diceNotationRegex = /(\d+d\d+)([khld][hld]?\d+|[khld][><=]=?\d+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(m\d+)?/g;
+    //TODO: Add rerolling, rerolling based on criteria and exploding dice that can explode, or explode once
 
     // Regex to match character attributes (e.g., Ernhart.charisma)
     const attributeRegex = /(\w+)\.(\w+)/g;
+
+    // Regex to match variable assignments (e.g., v_x = 2d6)
+    const variableRegex = /v_(\w+)\s*=\s*([^;]+);?/g;
 
     // Replace character attributes with their corresponding values
     let modifiedInput = diceInput.replace(attributeRegex, (match, character, stat) => {
@@ -1298,7 +1313,7 @@ rollDiceForm.addEventListener('submit', (e) => {
             rolls.push(roll);
         }
     
-        sortedRolls = [...rolls].sort((a, b) => a - b);
+        let sortedRolls = [...rolls].sort((a, b) => a - b);
     
         if (modifier) {
             const match = modifier.match(/([khld])([><=]=?)(\d+)/);
@@ -1413,8 +1428,24 @@ rollDiceForm.addEventListener('submit', (e) => {
         return Object.entries(counts).map(([roll, count]) => `${roll}: ${count}`).join(', ');
     }
 
-    // Function to evaluate nested dice notations
-    function evaluateExpression(expression) {
+    // Function to evaluate nested dice notations and handle variables
+    function evaluateExpression(expression, variables) {
+        // Evaluate variable expressions first
+        expression = expression.replace(variableRegex, (match, varName, varExpression) => {
+            const value = evaluateExpression(varExpression, variables);
+            variables[`v_${varName}`] = value;
+            return '';
+        });
+
+        // Replace variables with their values
+        expression = expression.replace(/\b(v_\w+)\b/g, (match) => {
+            const varValue = variables[match];
+            if (varValue === undefined) {
+                throw new Error(`Undefined variable: ${match}`);
+            }
+            return varValue;
+        });
+
         // Match and replace innermost dice notations first
         while (diceNotationRegex.test(expression)) {
             expression = expression.replace(diceNotationRegex, (match, diceNotation, modifier, successCriteria, failureCriteria, criticalSuccessCriteria, criticalFailureCriteria, multiples) => {
@@ -1460,13 +1491,16 @@ rollDiceForm.addEventListener('submit', (e) => {
         }
     }
 
-    // Evaluate the final expression including nested dice notations
+    // Initialize variables object
+    let variables = {};
+
+    // Evaluate the final expression including nested dice notations and variables
     let finalTotal = 0;
     let breakdown = [];
 
     try {
-        const evaluatedExpression = modifiedInput.replace(/\(([^()]+)\)/g, (match, innerExp) => evaluateExpression(innerExp));
-        finalTotal = evaluateExpression(evaluatedExpression);
+        const evaluatedExpression = evaluateExpression(modifiedInput, variables);
+        finalTotal = evaluatedExpression;
     } catch (error) {
         diceRollResult.textContent = 'Invalid dice notation or math expression.';
         return;
@@ -1510,9 +1544,13 @@ rollDiceForm.addEventListener('submit', (e) => {
     }
 
     // Update UI with the final result message
-    diceRollResult.textContent = finalResultMessage;
-});
-
+    if (skillCalled === 'noSkill') {
+        diceRollResult.textContent = finalResultMessage;
+    } else {
+        alert(`${skillCalled}: ` + finalResultMessage);
+    }
+    
+}
 function addRoll(skillName) {
     const diceNotation = prompt("Enter dice notation (e.g., 2d6 + 5):");
     if (diceNotation) {
@@ -1542,9 +1580,29 @@ function addRoll(skillName) {
 }
 
 function editRoll(skillName) {
-    const diceNotation = prompt("Enter new dice notation (e.g., 1d20 + 3):");
+    // Determine the current dice notation
+    let currentDiceNotation;
+    const applyToAll = document.getElementById(`global-edit-roll-${skillName}`).checked;
+    if (applyToAll) {
+        // Get the dice notation for the first character's skill (assume all characters have the same notation)
+        for (let character in characterSkills) {
+            const skill = characterSkills[character].find(s => s.name === skillName);
+            if (skill) {
+                currentDiceNotation = skill.lastRoll;
+                break;
+            }
+        }
+    } else {
+        // Get the dice notation for the selected character's skill
+        const skill = characterSkills[selectedCharacter].find(s => s.name === skillName);
+        if (skill) {
+            currentDiceNotation = skill.lastRoll;
+        }
+    }
+
+    // Prompt the user with the current dice notation as the default value
+    const diceNotation = prompt("Enter new dice notation (e.g., 1d20 + 3):", currentDiceNotation);
     if (diceNotation) {
-        const applyToAll = document.getElementById(`global-edit-roll-${skillName}`).checked;
         if (applyToAll) {
             // Apply to all characters
             for (let character in characterSkills) {
@@ -1558,66 +1616,17 @@ function editRoll(skillName) {
             const skill = characterSkills[selectedCharacter].find(s => s.name === skillName);
             skill.lastRoll = diceNotation;
         }
-            console.log(`Dice notation edited for ${skillName}: ${diceNotation}`);
-            saveGameState();  // Save state after modification
-            updateSkillSelect();  // Refresh the skill list UI
+        console.log(`Dice notation edited for ${skillName}: ${diceNotation}`);
+        saveGameState();  // Save state after modification
+        updateSkillSelect();  // Refresh the skill list UI
     }
-
 }
 
 function performRoll(skillName) {
-    const skill = characterSkills[selectedCharacter].find(s => s.name === skillName);
-    const diceNotation = skill.lastRoll;
-    console.log(diceNotation);
-    console.log(diceNotation)
-    const match = diceNotation.match(/^(\d+)d(\d+)(\s*([\+\-\*\/])\s*(\d+))?$/);
-    if (match) {
-        const numDice = parseInt(match[1]);
-        const diceType = parseInt(match[2]);
-        let modifierType = match[4];
-        let modifierValue = match[5] ? parseInt(match[5].trim()) : 0;
-
-        // Perform the roll (using existing roll dice function)
-        let total = rollDice(numDice, diceType, modifierType, modifierValue);
-
-        // Display the result
-        alert(`Performed ${numDice}d${diceType}${modifierType ? ` ${modifierType} ${modifierValue}` : ''} for ${skillName}. Result: ${total}`);
-    } else {
-        console.error('Invalid dice notation:', diceNotation);
-    }
+    diceLogic(skillName)
 }
 
-function rollDice(numDice, diceType, modifierType, modifierValue) {
-    //TODO: Remove this function later as its a weaker duplicate of a better function.
-    let total = 0;
-    for (let i = 0; i < numDice; i++) {
-        const roll = Math.floor(Math.random() * diceType) + 1;
-        total += roll;
-    }
-    if (modifierType) {
-        switch (modifierType) {
-            case '+':
-                total += modifierValue;
-                break;
-            case '-':
-                total -= modifierValue;
-                break;
-            case '*':
-                total *= modifierValue;
-                break;
-            case '/':
-                if (modifierValue !== 0) {
-                    total = Math.floor(total / modifierValue);
-                } else {
-                    console.error('Invalid dice notation: Division by zero.');
-                }
-                break;
-            default:
-                break;
-        }
-    }
-    return total;
-}
+
 
 document.addEventListener('DOMContentLoaded', () => {
     const links = document.querySelectorAll('.sidebar a');
