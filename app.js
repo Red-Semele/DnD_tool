@@ -1277,7 +1277,7 @@ function diceLogic(skillCalled) {
         diceInput = skill.lastRoll
     }
     // Updated regex to include multiples (e.g., 2d6m2, 5d20m3)
-    const diceNotationRegex = /(\d+d\d+)([khld][hld]?\d+|[khld][><=]=?\d+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(m\d+)?/g;
+    const diceNotationRegex = /(\d+d\d+)([khld][hld]?\d+|[khld][><=]=?\d+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(m\d+)?(e[><=]=?\d+)?/g;
     //TODO: Add rerolling, rerolling based on criteria and exploding dice that can explode, or explode once
 
     // Regex to match character attributes (e.g., Ernhart.charisma)
@@ -1304,13 +1304,23 @@ function diceLogic(skillCalled) {
     });
 
     // Function to roll dice
-    function rollDice(numDice, diceType, modifier, successCriteria, failureCriteria, criticalSuccessCriteria, criticalFailureCriteria, multiples) {
+    function rollDice(numDice, diceType, modifier, successCriteria, failureCriteria, criticalSuccessCriteria, criticalFailureCriteria, multiples, explodingCriteria) {
         let rolls = [];
         let total = 0;
     
+        function rollSingleDice() {
+            return Math.floor(Math.random() * diceType) + 1;
+        }
+
         for (let i = 0; i < numDice; i++) {
-            const roll = Math.floor(Math.random() * diceType) + 1;
+            let roll = rollSingleDice();
             rolls.push(roll);
+            if (explodingCriteria) {
+                while (compare(roll, explodingCriteria.operator, explodingCriteria.value)) {
+                    roll = rollSingleDice();
+                    rolls.push(roll);
+                }
+            }
         }
     
         let sortedRolls = [...rolls].sort((a, b) => a - b);
@@ -1361,7 +1371,7 @@ function diceLogic(skillCalled) {
                 const operator = successMatch[1];
                 const value = parseInt(successMatch[2], 10);
     
-                successCount = sortedRolls.filter(roll => compare(roll, operator, value)).length;
+                successCount = sortedRolls.filter(roll => compare(roll, operator, value)).length; //TODO: Use this for my exploding dice rerolls, as this can check how many fit a certain requirement.
             }
         }
     
@@ -1448,9 +1458,16 @@ function diceLogic(skillCalled) {
 
         // Match and replace innermost dice notations first
         while (diceNotationRegex.test(expression)) {
-            expression = expression.replace(diceNotationRegex, (match, diceNotation, modifier, successCriteria, failureCriteria, criticalSuccessCriteria, criticalFailureCriteria, multiples) => {
+            expression = expression.replace(diceNotationRegex, (match, diceNotation, modifier, successCriteria, failureCriteria, criticalSuccessCriteria, criticalFailureCriteria, multiples, exploding) => {
                 const [numDice, diceType] = diceNotation.split('d').map(Number);
-                const result = rollDice(numDice, diceType, modifier, successCriteria, failureCriteria, criticalSuccessCriteria, criticalFailureCriteria, multiples);
+                let explodingCriteria = null;
+                if (exploding) {
+                    const explodingMatch = exploding.match(/e([><=]=?)(\d+)/);
+                    if (explodingMatch) {
+                        explodingCriteria = { operator: explodingMatch[1], value: parseInt(explodingMatch[2], 10) };
+                    }
+                }
+                const result = rollDice(numDice, diceType, modifier, successCriteria, failureCriteria, criticalSuccessCriteria, criticalFailureCriteria, multiples, explodingCriteria);
                 let resultValue = result.total;
     
                 if (successCriteria) {
@@ -1465,7 +1482,8 @@ function diceLogic(skillCalled) {
                     resultValue = result.multipleCount;
                 }
     
-                breakdown.push(`Rolled ${diceNotation}${modifier ? ' ' + modifier : ''}${successCriteria ? ' ' + successCriteria : ''}${failureCriteria ? ' ' + failureCriteria : ''}${criticalSuccessCriteria ? ' ' + criticalSuccessCriteria : ''}${criticalFailureCriteria ? ' ' + criticalFailureCriteria : ''}${multiples ? ' ' + multiples : ''} and got ${resultValue} (${result.rolls.join(', ')})`);
+                
+                breakdown.push(`Rolled ${diceNotation}${modifier ? ' ' + modifier : ''}${successCriteria ? ' ' + successCriteria : ''}${failureCriteria ? ' ' + failureCriteria : ''}${criticalSuccessCriteria ? ' ' + criticalSuccessCriteria : ''}${criticalFailureCriteria ? ' ' + criticalFailureCriteria : ''}${multiples ? ' ' + multiples : ''}${exploding ? ' ' + exploding : ''} and got ${resultValue} (${result.rolls.join(', ')})`);
                 return resultValue;
             });
         }
