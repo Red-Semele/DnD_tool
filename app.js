@@ -53,6 +53,11 @@ const modeGraphSelect = document.getElementById('modeGraphSelect');
 const customFolders = [];
 const headers = document.querySelectorAll(".toggle-header");
 let savedState = localStorage.getItem('gameState');
+let gameState = ""
+let saves = ""
+let saveFiles = {};
+let currentSaveFile = ""
+let savedSaves = localStorage.getItem('saves');
 
 const titles = []; // Array to store titles
 const achievements = []; // Array to store achievements
@@ -134,10 +139,11 @@ function saveGameState() {
         itemNotes,
         characterFolders,
         selectedCharacter, 
-        customFolders
+        customFolders,
     };
     console.dir(notes, { depth: null });
     localStorage.setItem('gameState', JSON.stringify(gameState));
+    localStorage.setItem('saves', JSON.stringify(saveFiles));
     console.log("Save-attempted")
     console.log(gameState)
     console.log("Saving notes:", JSON.stringify(notes, null, 2));
@@ -145,14 +151,52 @@ function saveGameState() {
     console.dir(notes, { depth: null });
     logAllNotes()
 }
-
-function loadGameState() {
-    console.log("Attempting to load game state (RESET)");
-    const savedState = localStorage.getItem('gameState');
+//Strange occurence with game where adding a character like Ernhart back in the previously saved stuff came back, probaly due to the saveFiles?
+function loadGameState(importStyle) {
+    console.log("Loaded save " + JSON.stringify(saveFiles) + "BRENT" + savedState + "BART" + savedSaves)
+    if (importStyle !== 'imported') {
+        savedState = localStorage.getItem('gameState');
+        savedSaves = localStorage.getItem('saves');
+        console.log("LOADED, savedstate altered " + savedSaves)
+    }
     
     logAllNotes();
+    
+     if (savedSaves) {
+        try {
+            saveFiles = JSON.parse(savedSaves); // Correctly parse and assign to saveFiles 
+        } catch (e) {
+            console.error("Error parsing savedSaves:", e);
+            saveFiles = {}; // Initialize as empty object if parsing fails
+        }
+        console.log("BRENTISSIMO 1 " + JSON.stringify(savedSaves))
+        console.log("AGAMEMNON" + JSON.stringify(saveFiles))
+        for (let prop in saves) {
+            console.log("PROP DETECTED!")
+            if (saves.hasOwnProperty(prop)) {
+                switch (prop) {
+                    case 'saveFiles':
+                        updateData(eval(prop), deepClone(saves[prop]));
+                        break;
+                    
+                    
+                    case 'currentSaveFile':
+                        currentSaveFile = gameState[prop];
+                        break;
+                    default:
+                        // Handle additional properties if needed
+                        break;
+                }
+            }
+        }
+        console.log("BRENTISSIMO " + JSON.stringify(saveFiles))
+        console.log("Loaded save files:", JSON.stringify(saveFiles, null, 2));
+        updateSaveFileDropdown();
+    }
+    
     if (savedState) {
-        const gameState = JSON.parse(savedState);
+        gameState = JSON.parse(savedState);
+        console.log("Loaded save" + gameState)
         
         // Helper function to deep clone an object or array
         function deepClone(source) {
@@ -228,6 +272,7 @@ function loadGameState() {
         if (selectedCharacter) {
             updateCharacterDetails();
         }
+        
 
         console.log("Game state loaded successfully");
         if (itemNotes.length === 0) {
@@ -239,15 +284,33 @@ function loadGameState() {
     } else {
         console.log("No saved game state found");
     }
+     
 
     console.log("Loading notes:", JSON.stringify(characterSkills));
+    console.log("Loaded save 2" + JSON.stringify(saveFiles))
+
 }
 //TODO: Make it so that you don't need to reload the game to clear everything.
+//TODO: Make it so that removing gameState doesn't remove the saveFiles, keep them stored somewhere else.
 function eraseGameState() {
     console.log("Erasing saved game state");
     localStorage.removeItem('gameState');
     console.log("Saved game state erased successfully");
     loadGameState()
+}
+function eraseSaveState() {
+    //TODO: For some reason this doesn't seem to erase the saves anymore. Find out why. It does remove newly added saves, if you press "add save" and then immediately erase saves that particular save will be gone.
+    console.log("Erasing saved game state");
+    localStorage.removeItem('saves');
+    savedSaves = ""
+    saves = ""
+    // Clear the saveFiles object in memory
+    saveFiles = {};
+    currentSaveFile = null; 
+    console.log("Saves erased successfully");
+    localStorage.setItem('saves', JSON.stringify(saveFiles));
+    updateSaveFileDropdown(); // Clear the dropdown menu
+    loadGameState('imported')
 }
 
 // Event listener for opening the add folder modal
@@ -1572,7 +1635,7 @@ function diceLogic(skillCalled) {
 function addRoll(skillName) {
     const diceNotation = prompt("Enter dice notation (e.g., 2d6 + 5):");
     if (diceNotation) {
-        const applyToAll = document.getElementById(`global-add-roll-${skillName}`).checked;
+        const applyToAll = document.getElementById(`global-add-roll-${skillName}`).checked; //Bug when skill is cleared from skill list: Uncaught TypeError TypeError: Cannot read properties of null (reading 'checked')
         if (applyToAll) {
             // Apply to all characters
             for (let character in characterSkills) {
@@ -1947,14 +2010,10 @@ function importGameDataPrompt() {
   }
   function importGameData() {
     var importData = document.getElementById("variableChecker").value;
-    var original_json = LZString.decompressFromEncodedURIComponent(importData)
-    console.log(importData)
-    console.log(LZString.decompressFromBase64(importData))
-    var loaded_game_data = JSON.parse(original_json)
-    console.log(loaded_game_data)
-    gameData = loaded_game_data
+    savedState = JSON.parse(importData)
     document.getElementById("importData").style.display = "none";
     document.getElementById("variableChecker").style.display = "none";
+    loadGameState('imported');
   }
 
   function exportGameDataClipboard() {
@@ -1963,13 +2022,108 @@ function importGameDataPrompt() {
     }
 
     function checkVariables() {
+        saveGameState();
+        loadGameState();
         var textarea = document.getElementById("variableChecker");
-        var json = JSON.stringify(savedState)
-        var compressed = LZString.compressToEncodedURIComponent(json); //TODO: For some reason it says that lztring is not correctly defined, no clue what this is causing.
-        console.log(compressed)
-        textarea.value = ""
+        var json = JSON.stringify(savedState);
+        textarea.value = json;
         textarea.style.display = "inline-block";
-        textarea.value += compressed;
         document.getElementById("importData").style.display = "none";
         document.getElementById("exportToClipboard").style.display = "";
     }
+    
+   function createSaveFilePrompt() {
+    const saveFileName = prompt("Enter save name:");
+    if (saveFileName) {
+        createSaveFile(saveFileName);
+    }
+}
+
+// Function to create a new save file
+function createSaveFile(saveFileName) {
+    if (!saveFiles[saveFileName]) {
+        saveFiles[saveFileName] = []; // Initialize with an empty array for save
+        updateSaveFileDropdown();
+        alert('Save file created: ' + saveFileName);
+        currentSaveFile = saveFileName
+        saveToSelectedFile(); // Save the current state into the new file
+    } else {
+        alert('Save file already exists: ' + saveFileName);
+    }
+}
+
+// Function to select a save file from dropdown
+function selectSaveFile() {
+    const dropdown = document.getElementById('saveFileDropdown');
+    currentSaveFile = dropdown.value;
+    if (currentSaveFile) {
+        alert('Selected save file: ' + currentSaveFile);
+    } else {
+        alert('No save file selected.');
+    }
+}
+
+// Function to update the dropdown list of save files
+//TODO: This doesn't seem to be persistent anymore, except for when the createsavefile calls savetoselectedfile and it actually saves something, check the savetoslected file function out to find what makes this work.
+function updateSaveFileDropdown() {
+    const dropdown = document.getElementById('saveFileDropdown');
+    dropdown.innerHTML = '<option value="">-- Select --</option>';
+    for (const saveFileName in saveFiles) {
+        console.log("Bernardo" + saveFileName)
+        const option = document.createElement('option');
+        option.value = saveFileName;
+        option.textContent = saveFileName;
+        dropdown.appendChild(option);
+    }
+}
+
+// Function to save the current game state to the selected save file
+//For some reason saving to a selected file twice, the same content, seems to properly protect it from being erased upon reload, find out why.
+function saveToSelectedFile() {
+    if (currentSaveFile) {
+        if (saveFiles[currentSaveFile]) {
+            for (const saveFileName in saveFiles) {
+                console.log("Coooompare" + saveFileName + "BABA " + saveFiles[saveFileName])
+            }
+            saveGameState();
+            const saveToFile = localStorage.getItem('gameState');
+            if (saveToFile === "") {
+                console.log("MY susicions are right, the localStorage somehow gets set to nothing, thus making it push nothing to the savefiles.")
+            }
+            //TODO: Saving twice for some reason seems to be the only way to truly have persistent saves? It might just be that the savefiles don't get properly initialized like in the if block below, and that having the array emptied and then pushed to somehow fixes that issue, might be worth looking
+            if (saveFiles[currentSaveFile] && saveFiles[currentSaveFile].length > 0) {
+                // Clear the existing saves
+                saveFiles[currentSaveFile] = [];
+                console.log("Emptied Save File")
+            }
+            // Add the new save to the file
+            saveFiles[currentSaveFile].push(saveToFile);
+            alert('Game state saved to: ' + currentSaveFile + JSON.stringify(saveToFile));
+            saveGameState();
+        } else {
+            alert('Save file does not exist.');
+        }
+    } else {
+        alert('No save file selected.');
+    }
+}
+
+// Function to load the latest game state from the selected save file
+function loadSelectedFile() {
+    if (currentSaveFile) {
+        for (const saveFileName in saveFiles) {
+            console.log("Compare Maestro" + saveFileName + "BABA " + saveFiles[saveFileName])
+        }
+        if (saveFiles[currentSaveFile] && saveFiles[currentSaveFile].length > 0) {
+            const latestSave = saveFiles[currentSaveFile].slice(-1)[0]; // Load the latest save
+            localStorage.setItem('gameState', latestSave)
+            alert('Game state loaded from: ' + currentSaveFile + JSON.stringify(latestSave) );
+            loadGameState()
+        } else {
+            alert('Save file is empty or does not exist.');
+            console.log(saveFiles[currentSaveFile] + "Length" + saveFiles[currentSaveFile].length)
+        }
+    } else {
+        alert('No save file selected.');
+    }
+}

@@ -383,9 +383,16 @@
         </div>
         <div class= "section" id="saveStuff">
             <button onclick="eraseGameState()">Erase Save TODO: make the stuff below be supported in this, using dice cube incremental code.</button>
-            <button onclick="resetSave()">Reset Save</button>
             <button onclick="checkVariables()">Check Values</button>
             <button onclick="importGameDataPrompt()">Import Save</button>
+            <button onclick="createSaveFilePrompt()">Create a new save file</button>
+            <button onclick="saveToSelectedFile()">Save to Selected File</button>
+            <button onclick="loadSelectedFile()">Load Selected File</button>
+            <button onclick="eraseGameState()">Erase all savefiles.</button>
+            <label for="saveFileDropdown">Select Save File:</label>
+            <select id="saveFileDropdown" onchange="selectSaveFile(this.value)">
+                <option value="">-- Select --</option>
+            </select>
             <div>
               <textarea id="variableChecker" class="variable-checker" name="variableChecker" rows="15" cols="100">
               </textarea>
