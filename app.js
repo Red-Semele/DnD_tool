@@ -308,7 +308,6 @@ function eraseSaveState() {
     saveFiles = {};
     currentSaveFile = null; 
     console.log("Saves erased successfully");
-    localStorage.setItem('saves', JSON.stringify(saveFiles));
     updateSaveFileDropdown(); // Clear the dropdown menu
     loadGameState('imported')
 }
