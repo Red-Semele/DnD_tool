@@ -95,6 +95,7 @@ document.getElementById('title-list').style.display = "none";
 document.getElementById('achievement-list').style.display = "none";
 document.getElementById('inventory-list').style.display = "none";
 document.getElementById('skills-list').style.display = "none";
+document.getElementById('variableChecker').style.display = "none"
 document.getElementById('add-stat-button').addEventListener('click', addStatHandler);
 document.addEventListener('DOMContentLoaded', loadGameState);
 const ctx = document.getElementById('myChart');
