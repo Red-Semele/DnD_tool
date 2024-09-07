@@ -1331,17 +1331,18 @@ rollDiceForm.addEventListener('submit', (e) => {
 });
 
 function diceLogic(skillCalled) {
-    let diceInput = ""
-    
+    let diceInput = "";
+
     if (skillCalled === 'noSkill') {
         diceInput = document.getElementById('dice-input').value.trim();
     } else {
         const skill = characterSkills[selectedCharacter].find(s => s.name === skillCalled);
-        diceInput = skill.lastRoll
+        diceInput = skill.lastRoll;
     }
-    // Updated regex to include multiples (e.g., 2d6m2, 5d20m3)
-    const diceNotationRegex = /(\d+d\d+)([khld][hld]?\d+|[khld][><=]=?\d+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(m\d+)?(e[><=]=?\d+)?/g;
-    //TODO: Add rerolling, rerolling based on criteria and exploding dice that can explode, or explode once
+
+    // Updated regex to include all dice notations and modifiers
+    //const diceNotationRegex = /(\d+d\d+)([khld][hld]?\d+|[khld][><=]=?\d+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(m\d+)?(e[><=]=?\d+)?/g;
+    const diceNotationRegex = /(\d+d\d+)((?:[khld][><=]?\d+|[khld][hld]\d+)+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(m\d+)?(e[><=]=?\d+)?/g;
 
     // Regex to match character attributes (e.g., Ernhart.charisma)
     const attributeRegex = /(\w+)\.(\w+)/g;
@@ -1366,142 +1367,80 @@ function diceLogic(skillCalled) {
         }
     });
 
-    // Function to roll dice
-    function rollDice(numDice, diceType, modifier, successCriteria, failureCriteria, criticalSuccessCriteria, criticalFailureCriteria, multiples, explodingCriteria) {
-        let rolls = [];
-        let total = 0;
-    
-        function rollSingleDice() {
-            return Math.floor(Math.random() * diceType) + 1;
-        }
-
-        for (let i = 0; i < numDice; i++) {
-            let roll = rollSingleDice();
-            rolls.push(roll);
-            if (explodingCriteria) {
-                while (compare(roll, explodingCriteria.operator, explodingCriteria.value)) {
-                    roll = rollSingleDice();
-                    rolls.push(roll);
-                }
-            }
-        }
-    
-        let sortedRolls = [...rolls].sort((a, b) => a - b);
-    
-        if (modifier) {
-            const match = modifier.match(/([khld])([><=]=?)(\d+)/);
-            const matchOldStyle = modifier.match(/([khld])([hld])(\d+)/);
-    
-            if (match) {
-                const action = match[1];
-                const operator = match[2];
-                const value = parseInt(match[3], 10);
-    
-                switch (action) {
-                    case 'k':
-                        sortedRolls = sortedRolls.filter(roll => compare(roll, operator, value));
-                        break;
-                    case 'd':
-                        sortedRolls = sortedRolls.filter(roll => !compare(roll, operator, value));
-                        break;
-                }
-            } else if (matchOldStyle) {
-                const action = matchOldStyle[1] + matchOldStyle[2]; // 'kh', 'kl', 'dh', 'dl'
-                const count = parseInt(matchOldStyle[3], 10);
-    
-                switch (action) {
-                    case 'kh':
-                        sortedRolls = sortedRolls.slice(-count);
-                        break;
-                    case 'kl':
-                        sortedRolls = sortedRolls.slice(0, count);
-                        break;
-                    case 'dh':
-                        sortedRolls = sortedRolls.slice(0, -count);
-                        break;
-                    case 'dl':
-                        sortedRolls = sortedRolls.slice(count);
-                        break;
-                }
-            }
-        }
-    
-        // Process success criteria if present
-        let successCount = 0;
-        if (successCriteria) {
-            const successMatch = successCriteria.match(/cs([><=]=?)(\d+)/);
-            if (successMatch) {
-                const operator = successMatch[1];
-                const value = parseInt(successMatch[2], 10);
-    
-                successCount = sortedRolls.filter(roll => compare(roll, operator, value)).length; //TODO: Use this for my exploding dice rerolls, as this can check how many fit a certain requirement.
-            }
-        }
-    
-        // Process failure criteria if present
-        let failureCount = 0;
-        if (failureCriteria) {
-            const failureMatch = failureCriteria.match(/cf([><=]=?)(\d+)/);
-            if (failureMatch) {
-                const operator = failureMatch[1];
-                const value = parseInt(failureMatch[2], 10);
-    
-                failureCount = sortedRolls.filter(roll => compare(roll, operator, value)).length;
-            }
-        }
-    
-        // Process critical success criteria if present
-        let criticalSuccessCount = 0;
-        if (criticalSuccessCriteria) {
-            const criticalSuccessMatch = criticalSuccessCriteria.match(/ccs([><=]=?)(\d+)/);
-            if (criticalSuccessMatch) {
-                const operator = criticalSuccessMatch[1];
-                const value = parseInt(criticalSuccessMatch[2], 10);
-    
-                criticalSuccessCount = sortedRolls.filter(roll => compare(roll, operator, value)).length;
-            }
-        }
-    
-        // Process critical failure criteria if present
-        let criticalFailureCount = 0;
-        if (criticalFailureCriteria) {
-            const criticalFailureMatch = criticalFailureCriteria.match(/ccf([><=]=?)(\d+)/);
-            if (criticalFailureMatch) {
-                const operator = criticalFailureMatch[1];
-                const value = parseInt(criticalFailureMatch[2], 10);
-    
-                criticalFailureCount = sortedRolls.filter(roll => compare(roll, operator, value)).length;
-            }
-        }
-    
-        // Calculate multiples if present
-        let multipleCount = 0;
-        if (multiples) {
-            const multipleMatch = multiples.match(/m(\d+)/);
-            if (multipleMatch) {
-                const numMultiples = parseInt(multipleMatch[1], 10);
-                const rollCounts = rolls.reduce((counts, roll) => {
-                    counts[roll] = (counts[roll] || 0) + 1;
-                    return counts;
-                }, {});
-    
-                multipleCount = Object.values(rollCounts).filter(count => count >= numMultiples).length;
-            }
-        }
-    
-        total = sortedRolls.reduce((sum, roll) => sum + roll, 0);
-        return { rolls, sortedRolls, total, successCount, failureCount, criticalSuccessCount, criticalFailureCount, multipleCount };
+    // Function to roll dice and return results
+    function rollDice(numDice, diceType) {
+        return Array.from({ length: numDice }, () => Math.floor(Math.random() * diceType) + 1);
     }
 
-    function summarizeRolls(rolls) {
-        let counts = {};
-        rolls.forEach(roll => {
-            counts[roll] = (counts[roll] || 0) + 1;
-        });
-        return Object.entries(counts).map(([roll, count]) => `${roll}: ${count}`).join(', ');
+    // Function to apply a single modifier and return the modified rolls
+    function applySingleModifier(rolls, modifier) {
+        let modifiedRolls = [...rolls].sort((a, b) => a - b);
+        console.log("Modification set: " + modifier);
+
+        const match = modifier.match(/([khld])([><=]=?)(\d+)/);
+        const matchOldStyle = modifier.match(/([khld])([hld])(\d+)/);
+
+        if (match) {
+            const action = match[1];
+            const operator = match[2];
+            const value = parseInt(match[3], 10);
+
+            switch (action) {
+                case 'k': // Keep
+                    modifiedRolls = modifiedRolls.filter(roll => compare(roll, operator, value));
+                    break;
+                case 'd': // Discard
+                    modifiedRolls = modifiedRolls.filter(roll => !compare(roll, operator, value));
+                    break;
+            }
+        }
+        if (matchOldStyle) {
+            const action = matchOldStyle[1] + matchOldStyle[2]; // 'kh', 'kl', 'dh', 'dl'
+            const count = parseInt(matchOldStyle[3], 10);
+
+            switch (action) {
+                case 'kh': // Keep highest
+                    modifiedRolls = modifiedRolls.slice(-count);
+                    break;
+                case 'kl': // Keep lowest
+                    modifiedRolls = modifiedRolls.slice(0, count);
+                    break;
+                case 'dh': // Discard highest
+                    modifiedRolls = modifiedRolls.slice(0, -count);
+                    break;
+                case 'dl': // Discard lowest
+                    modifiedRolls = modifiedRolls.slice(count);
+                    break;
+            }
+        }
+        console.log("Modified: " + modifiedRolls);
+        return modifiedRolls;
     }
 
-    // Function to evaluate nested dice notations and handle variables
+    function applyModifiers(rolls, modifierString) {
+        if (!modifierString) return rolls;
+    
+        // Split the modifier string into individual modifiers
+        const modifiers = modifierString.match(/([khld][><=]?\d+|[khld][hld]\d+)/g);
+    
+        let modifiedRolls = [...rolls];
+        if (modifiers) {
+            modifiers.forEach(modifier => {
+                modifiedRolls = applySingleModifier(modifiedRolls, modifier);
+            });
+        }
+    
+        return modifiedRolls;
+    }
+
+    // Function to evaluate dice notation with modifiers
+    function evaluateDiceNotation(diceNotation) {
+        const [numDice, diceType] = diceNotation.split('d').map(Number);
+        const rolls = rollDice(numDice, diceType);
+        return rolls;
+    }
+
+    // Function to evaluate the entire expression
     function evaluateExpression(expression, variables) {
         // Evaluate variable expressions first
         expression = expression.replace(variableRegex, (match, varName, varExpression) => {
@@ -1519,37 +1458,90 @@ function diceLogic(skillCalled) {
             return varValue;
         });
 
-        // Match and replace innermost dice notations first
+        let modifiedRolls = [];
+        let resultValue = 0;
+
+        // Process dice notations one by one
         while (diceNotationRegex.test(expression)) {
             expression = expression.replace(diceNotationRegex, (match, diceNotation, modifier, successCriteria, failureCriteria, criticalSuccessCriteria, criticalFailureCriteria, multiples, exploding) => {
-                const [numDice, diceType] = diceNotation.split('d').map(Number);
-                let explodingCriteria = null;
-                if (exploding) {
-                    const explodingMatch = exploding.match(/e([><=]=?)(\d+)/);
-                    if (explodingMatch) {
-                        explodingCriteria = { operator: explodingMatch[1], value: parseInt(explodingMatch[2], 10) };
+                const rolls = evaluateDiceNotation(diceNotation);
+                let tempRolls = rolls;
+
+                // Apply all parts of the modifier
+                if (modifier) {
+                    console.log("Mod" + modifier)
+                    tempRolls = applyModifiers(tempRolls, modifier);
+                }
+
+                // Use the modified rolls for further criteria
+                if (successCriteria || failureCriteria || criticalSuccessCriteria || criticalFailureCriteria || multiples) {
+                    modifiedRolls = tempRolls;
+                    console.log("Modified: " + modifiedRolls);
+                }
+
+                // Prepare result for success/failure checks
+                resultValue = tempRolls.reduce((sum, roll) => sum + roll, 0);
+
+                // Handle success criteria
+                if (successCriteria) {
+                    const successMatch = successCriteria.match(/cs([><=]=?)(\d+)/);
+                    if (successMatch) {
+                        const operator = successMatch[1];
+                        const value = parseInt(successMatch[2], 10);
+                        resultValue = tempRolls.filter(roll => compare(roll, operator, value)).length;
                     }
                 }
-                const result = rollDice(numDice, diceType, modifier, successCriteria, failureCriteria, criticalSuccessCriteria, criticalFailureCriteria, multiples, explodingCriteria);
-                let resultValue = result.total;
-    
-                if (successCriteria) {
-                    resultValue = result.successCount;
-                } else if (failureCriteria) {
-                    resultValue = result.failureCount;
-                } else if (criticalSuccessCriteria) {
-                    resultValue = result.criticalSuccessCount;
-                } else if (criticalFailureCriteria) {
-                    resultValue = result.criticalFailureCount;
-                } else if (multiples) {
-                    resultValue = result.multipleCount;
+
+                // Handle failure criteria
+                if (failureCriteria) {
+                    const failureMatch = failureCriteria.match(/cf([><=]=?)(\d+)/);
+                    if (failureMatch) {
+                        const operator = failureMatch[1];
+                        const value = parseInt(failureMatch[2], 10);
+                        resultValue = tempRolls.filter(roll => compare(roll, operator, value)).length;
+                    }
                 }
-    
-                
-                breakdown.push(`Rolled ${diceNotation}${modifier ? ' ' + modifier : ''}${successCriteria ? ' ' + successCriteria : ''}${failureCriteria ? ' ' + failureCriteria : ''}${criticalSuccessCriteria ? ' ' + criticalSuccessCriteria : ''}${criticalFailureCriteria ? ' ' + criticalFailureCriteria : ''}${multiples ? ' ' + multiples : ''}${exploding ? ' ' + exploding : ''} and got ${resultValue} (${result.rolls.join(', ')})`);
+
+                // Handle critical success criteria
+                if (criticalSuccessCriteria) {
+                    const criticalSuccessMatch = criticalSuccessCriteria.match(/ccs([><=]=?)(\d+)/);
+                    if (criticalSuccessMatch) {
+                        const operator = criticalSuccessMatch[1];
+                        const value = parseInt(criticalSuccessMatch[2], 10);
+                        resultValue = tempRolls.filter(roll => compare(roll, operator, value)).length;
+                    }
+                }
+
+                // Handle critical failure criteria
+                if (criticalFailureCriteria) {
+                    const criticalFailureMatch = criticalFailureCriteria.match(/ccf([><=]=?)(\d+)/);
+                    if (criticalFailureMatch) {
+                        const operator = criticalFailureMatch[1];
+                        const value = parseInt(criticalFailureMatch[2], 10);
+                        resultValue = tempRolls.filter(roll => compare(roll, operator, value)).length;
+                    }
+                }
+
+                // Handle multiples criteria
+                if (multiples) {
+                    const multipleMatch = multiples.match(/m(\d+)/);
+                    if (multipleMatch) {
+                        const numMultiples = parseInt(multipleMatch[1], 10);
+                        const rollCounts = tempRolls.reduce((counts, roll) => {
+                            counts[roll] = (counts[roll] || 0) + 1;
+                            return counts;
+                        }, {});
+                        resultValue = Object.values(rollCounts).filter(count => count >= numMultiples).length;
+                    }
+                }
+
+                let detailedResult = `${diceNotation}${modifier ? ' ' + modifier : ''}${successCriteria ? ' ' + successCriteria : ''}${failureCriteria ? ' ' + failureCriteria : ''}${criticalSuccessCriteria ? ' ' + criticalSuccessCriteria : ''}${criticalFailureCriteria ? ' ' + criticalFailureCriteria : ''}${multiples ? ' ' + multiples : ''}${exploding ? ' ' + exploding : ''} → Rolls: ${rolls.join(', ')} → Modified: ${tempRolls.join(', ')} → Final: ${resultValue}`;
+
+                breakdown.push(detailedResult);
                 return resultValue;
             });
         }
+
         return eval(expression);
     }
 
@@ -1572,10 +1564,7 @@ function diceLogic(skillCalled) {
         }
     }
 
-    // Initialize variables object
     let variables = {};
-
-    // Evaluate the final expression including nested dice notations and variables
     let finalTotal = 0;
     let breakdown = [];
 
@@ -1583,23 +1572,22 @@ function diceLogic(skillCalled) {
         const evaluatedExpression = evaluateExpression(modifiedInput, variables);
         finalTotal = evaluatedExpression;
     } catch (error) {
+        console.log(error + "Error" + modifiedInput + JSON.stringify(variables));
         diceRollResult.textContent = 'Invalid dice notation or math expression.';
         return;
     }
 
-    // Prepare the final result message with detailed breakdown
     let finalResultMessage = `${breakdown.join(' | ')} => Total: ${finalTotal}`;
-    const maxLength = 200;  // Set your desired max length
+    const maxLength = 200;
 
     if (finalResultMessage.length > maxLength) {
-        // Shorten each breakdown to summarized rolls
         breakdown = breakdown.map(message => {
-            const rollsMatch = message.match(/\(([^)]+)\)/);
+            const rollsMatch = message.match(/Rolls: ([^ ]+)/);
             if (rollsMatch) {
                 const rollsString = rollsMatch[1];
                 const rolls = rollsString.split(', ').map(Number);
                 const summary = summarizeRolls(rolls);
-                return message.replace(/\(.*\)/, `(${summary})`);
+                return message.replace(/Rolls: [^ ]+/, `Rolls: ${summary}`);
             }
             return message;
         });
@@ -1607,12 +1595,12 @@ function diceLogic(skillCalled) {
     }
 
     if (finalResultMessage.length > maxLength) {
-        // Further shorten each breakdown to only the two highest and two lowest rolls
         breakdown = breakdown.map(message => {
-            const rollsMatch = message.match(/\(([^)]+)\)/);
+            const rollsMatch = message.match(/Rolls: ([^ ]+)/);
             if (rollsMatch) {
-                const extremes = `Lowest: ${sortedRolls[0]}, Highest: ${sortedRolls[sortedRolls.length - 1]}`;
-                return message.replace(/\(.*\)/, `(${extremes})`);
+                const rolls = rollsMatch[1].split(', ').map(Number);
+                const extremes = `Lowest: ${Math.min(...rolls)}, Highest: ${Math.max(...rolls)}`;
+                return message.replace(/Rolls: [^ ]+/, `Rolls: ${extremes}`);
             }
             return message;
         });
@@ -1620,17 +1608,22 @@ function diceLogic(skillCalled) {
     }
 
     if (finalResultMessage.length > maxLength) {
-        // Show only the total if still too long
         finalResultMessage = `Total: ${finalTotal}`;
     }
 
-    // Update UI with the final result message
     if (skillCalled === 'noSkill') {
         diceRollResult.textContent = finalResultMessage;
     } else {
         alert(`${skillCalled}: ` + finalResultMessage);
     }
-    
+}
+
+function summarizeRolls(rolls) {
+    let counts = {};
+    rolls.forEach(roll => {
+        counts[roll] = (counts[roll] || 0) + 1;
+    });
+    return Object.entries(counts).map(([roll, count]) => `${roll}: ${count}`).join(', ');
 }
 function addRoll(skillName) {
     const diceNotation = prompt("Enter dice notation (e.g., 2d6 + 5):");
