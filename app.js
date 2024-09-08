@@ -1332,6 +1332,7 @@ rollDiceForm.addEventListener('submit', (e) => {
 
 function diceLogic(skillCalled) {
     let diceInput = "";
+    let resultValue = 0;
 
     if (skillCalled === 'noSkill') {
         diceInput = document.getElementById('dice-input').value.trim();
@@ -1342,13 +1343,16 @@ function diceLogic(skillCalled) {
 
     // Updated regex to include all dice notations and modifiers
     //const diceNotationRegex = /(\d+d\d+)([khld][hld]?\d+|[khld][><=]=?\d+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(m\d+)?(e[><=]=?\d+)?/g;
-    const diceNotationRegex = /(\d+d\d+)((?:[khld][><=]?\d+|[khld][hld]\d+)+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(m\d+)?(e[><=]=?\d+)?/g;
+    
+    const diceNotationRegex = /(\d+d\d+)((?:[khld][><=]?\d+|[khld][hld]\d+|m\d+)+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(e[><=]=?\d+)?/g;
 
     // Regex to match character attributes (e.g., Ernhart.charisma)
     const attributeRegex = /(\w+)\.(\w+)/g;
 
     // Regex to match variable assignments (e.g., v_x = 2d6)
     const variableRegex = /v_(\w+)\s*=\s*([^;]+);?/g;
+
+    let endsOnMultiple = false;
 
     // Replace character attributes with their corresponding values
     let modifiedInput = diceInput.replace(attributeRegex, (match, character, stat) => {
@@ -1414,24 +1418,74 @@ function diceLogic(skillCalled) {
             }
         }
         console.log("Modified: " + modifiedRolls);
+        endsOnMultiple = false
         return modifiedRolls;
     }
-
     function applyModifiers(rolls, modifierString) {
         if (!modifierString) return rolls;
     
         // Split the modifier string into individual modifiers
-        const modifiers = modifierString.match(/([khld][><=]?\d+|[khld][hld]\d+)/g);
+        const modifiers = modifierString.match(/([khld][><=]?\d+|[khld][hld]\d+|m\d+)/g);
     
         let modifiedRolls = [...rolls];
         if (modifiers) {
+            // Apply modifiers in the order they appear
             modifiers.forEach(modifier => {
-                modifiedRolls = applySingleModifier(modifiedRolls, modifier);
+                if (modifier.startsWith('m')) {
+                    // Handle multiples (m2) before modifying rolls, so they are applied last if other modifiers are present
+                    modifiedRolls = applyMultiples(modifiedRolls, modifier);
+                    console.log("Kane" + modifiedRolls + modifier + resultValue)
+                } else {
+                    // Apply keep/discard modifiers
+                    modifiedRolls = applySingleModifier(modifiedRolls, modifier);
+                }
             });
         }
     
         return modifiedRolls;
     }
+    
+    function applyMultiples(rolls, multipleModifier) {
+        let modifiedRolls = [...rolls];
+        const multipleMatch = multipleModifier.match(/m(\d+)/);
+        
+        if (multipleMatch) {
+            const numMultiples = parseInt(multipleMatch[1], 10);
+            console.log("Multiples modifier: " + multipleModifier);
+    
+            // Count the occurrences of each roll value
+            const rollCounts = rolls.reduce((counts, roll) => {
+                counts[roll] = (counts[roll] || 0) + 1;
+                return counts;
+            }, {});
+    
+            // Initialize total multiples counter and modified roll list
+            let totalMultiples = 0;
+            modifiedRolls = [];
+    
+            // Loop through each roll count and calculate how many multiples can be made
+            for (const [roll, count] of Object.entries(rollCounts)) {
+                const multiplesOfRoll = Math.floor(count / numMultiples); // How many full groups of numMultiples
+                totalMultiples += multiplesOfRoll; // Add the number of multiples for this roll
+    
+                // Add the roll to the modifiedRolls array based on how many multiples there are
+                for (let i = 0; i < multiplesOfRoll * numMultiples; i++) {
+                    modifiedRolls.push(parseInt(roll)); // Push the roll value as part of a valid multiple
+                }
+            }
+            resultValue = totalMultiples
+            endsOnMultiple = true
+            console.log("Roll counts: ", rollCounts);
+            console.log("Total multiples that appear " + numMultiples + " or more times: " + totalMultiples);
+    
+            // Return the modified rolls that contribute to complete multiples
+            return modifiedRolls; 
+        }
+        
+        return modifiedRolls;
+    }
+    
+    
 
     // Function to evaluate dice notation with modifiers
     function evaluateDiceNotation(diceNotation) {
@@ -1459,7 +1513,7 @@ function diceLogic(skillCalled) {
         });
 
         let modifiedRolls = [];
-        let resultValue = 0;
+        
 
         // Process dice notations one by one
         while (diceNotationRegex.test(expression)) {
@@ -1469,7 +1523,7 @@ function diceLogic(skillCalled) {
 
                 // Apply all parts of the modifier
                 if (modifier) {
-                    console.log("Mod" + modifier)
+                    console.log("Modi" + modifier)
                     tempRolls = applyModifiers(tempRolls, modifier);
                 }
 
@@ -1480,8 +1534,9 @@ function diceLogic(skillCalled) {
                 }
 
                 // Prepare result for success/failure checks
-                resultValue = tempRolls.reduce((sum, roll) => sum + roll, 0);
-
+                if (endsOnMultiple == false) {
+                    resultValue = tempRolls.reduce((sum, roll) => sum + roll, 0);
+                }
                 // Handle success criteria
                 if (successCriteria) {
                     const successMatch = successCriteria.match(/cs([><=]=?)(\d+)/);
@@ -1489,6 +1544,8 @@ function diceLogic(skillCalled) {
                         const operator = successMatch[1];
                         const value = parseInt(successMatch[2], 10);
                         resultValue = tempRolls.filter(roll => compare(roll, operator, value)).length;
+                        modifiedRolls = tempRolls.filter(roll => compare(roll, operator, value));
+                        console.log("Mod" + modifiedRolls)
                     }
                 }
 
@@ -1499,6 +1556,7 @@ function diceLogic(skillCalled) {
                         const operator = failureMatch[1];
                         const value = parseInt(failureMatch[2], 10);
                         resultValue = tempRolls.filter(roll => compare(roll, operator, value)).length;
+                        modifiedRolls = tempRolls.filter(roll => compare(roll, operator, value));
                     }
                 }
 
@@ -1509,6 +1567,7 @@ function diceLogic(skillCalled) {
                         const operator = criticalSuccessMatch[1];
                         const value = parseInt(criticalSuccessMatch[2], 10);
                         resultValue = tempRolls.filter(roll => compare(roll, operator, value)).length;
+                        modifiedRolls = tempRolls.filter(roll => compare(roll, operator, value));
                     }
                 }
 
@@ -1519,12 +1578,15 @@ function diceLogic(skillCalled) {
                         const operator = criticalFailureMatch[1];
                         const value = parseInt(criticalFailureMatch[2], 10);
                         resultValue = tempRolls.filter(roll => compare(roll, operator, value)).length;
+                        modifiedRolls = tempRolls.filter(roll => compare(roll, operator, value));
+                        
                     }
                 }
 
                 // Handle multiples criteria
                 if (multiples) {
                     const multipleMatch = multiples.match(/m(\d+)/);
+                    console.log("Mult" + multiples)
                     if (multipleMatch) {
                         const numMultiples = parseInt(multipleMatch[1], 10);
                         const rollCounts = tempRolls.reduce((counts, roll) => {
@@ -1534,10 +1596,15 @@ function diceLogic(skillCalled) {
                         resultValue = Object.values(rollCounts).filter(count => count >= numMultiples).length;
                     }
                 }
-
+                tempRolls = modifiedRolls
+                
+                //tempRolls = modifiedRolls
+                console.log("Kanus" + tempRolls)
                 let detailedResult = `${diceNotation}${modifier ? ' ' + modifier : ''}${successCriteria ? ' ' + successCriteria : ''}${failureCriteria ? ' ' + failureCriteria : ''}${criticalSuccessCriteria ? ' ' + criticalSuccessCriteria : ''}${criticalFailureCriteria ? ' ' + criticalFailureCriteria : ''}${multiples ? ' ' + multiples : ''}${exploding ? ' ' + exploding : ''} → Rolls: ${rolls.join(', ')} → Modified: ${tempRolls.join(', ')} → Final: ${resultValue}`;
 
                 breakdown.push(detailedResult);
+                
+                console.log("Temp" + tempRolls)
                 return resultValue;
             });
         }
