@@ -344,6 +344,7 @@ function updateFoldersDisplay() {
             <li>${item.name} - ${item.description}
             <button onclick="console.log('Clicked + button for custom folder:', '${item.name.replace("'", "\\'")}'); addNoteModalHandler('custom', '${item.name.replace("'", "\\'")}', '${item.id}')">+</button>
             <button onclick="console.log('Clicked Read Notes button for custom folder:', '${item.name.replace("'", "\\'")}'); readNotesModalHandler('custom', '${item.name.replace("'", "\\'")}', '${item.id}')">Read Notes</button>
+            
             </li>
         `).join('');
 
@@ -1022,8 +1023,8 @@ window.onclick = (event) => {
 
 
 function generateInventoryItemHtml(item) {
-    console.log("N");
-    console.log(item.stats);
+    console.log("N" + JSON.stringify(item));
+    console.log(item.stats); //TODO: For now this reads the given apples as null because it got deleted, probably add a fix for that, maybe don't delete the apples but just cut them or something?
     console.log(Array.isArray(item.stats)); // Verify if it's an array
     const statHtml = item.stats.map(s => `${s.stat}: ${s.value}`).join(', ');
     
@@ -1035,6 +1036,7 @@ function generateInventoryItemHtml(item) {
             <input type="number" min="0" value="${item.quantity}" onchange="handleQuantityChange(event, '${item.name.replace("'", "\\'")}', '${item.id}')">
             <button onclick="addNoteModalHandler('items', '${item.name.replace("'", "\\'")}', '${item.id}')">+</button>
             <button onclick="readNotesModalHandler('items', '${item.name.replace("'", "\\'")}', '${item.id}')">Read Notes</button>
+            <button onclick="console.log('Clicked give item:', '${item.name.replace("'", "\\'")}'); giveItem('${item.name.replace("'", "\\'")}', '${item.id}')">Give item</button>
         </li>`;
 }
 
@@ -1068,6 +1070,7 @@ function setItemQuantity(itemName, itemId, quantity) {
         if (itemIndex !== -1) {
             // Update the quantity of the existing item
             inventory[selectedCharacter][itemIndex].quantity = quantity;
+            console.log("ITEMTEST" + JSON.stringify(inventory[selectedCharacter][itemIndex]) + JSON.stringify(inventory[selectedCharacter]))
         } else {
             // If the item does not exist, you can add it or handle it accordingly
             console.log(`Item ${itemName} does not exist in the inventory of ${selectedCharacter}`);
@@ -1081,6 +1084,7 @@ function setItemQuantity(itemName, itemId, quantity) {
         console.log(`Character ${selectedCharacter} does not have an inventory`);
     }
     console.log(`Setting quantity of ${itemName} ${itemId} to ${quantity}`);
+    
     
 }
 
@@ -1596,7 +1600,7 @@ function diceLogic(skillCalled) {
                         resultValue = Object.values(rollCounts).filter(count => count >= numMultiples).length;
                     }
                 }
-                tempRolls = modifiedRolls
+                //tempRolls = modifiedRolls TODO: This makes all modified stuff be displayed correctly ecept for multiples which seem to break, probaly because modifiedrolls is set empty for them
                 
                 //tempRolls = modifiedRolls
                 console.log("Kanus" + tempRolls)
@@ -2090,6 +2094,7 @@ function importGameDataPrompt() {
         textarea.style.display = "inline-block";
         document.getElementById("importData").style.display = "none";
         document.getElementById("exportToClipboard").style.display = "";
+
     }
     
    function createSaveFilePrompt() {
@@ -2187,3 +2192,114 @@ function loadSelectedFile() {
         alert('No save file selected.');
     }
 }
+function giveItem(itemN, itemI) {
+    // Prompt the user to filter recipients
+    let possibleRecipients = characters;
+
+    // Function to display a filtered list based on user input
+    function filterRecipients(input) {
+        return possibleRecipients.filter(name => name.toLowerCase().startsWith(input.toLowerCase()));
+    }
+
+    // Simulate user typing a few characters and selecting the recipient
+    let userInput = prompt("Who would you like to give the item to?");
+    let filteredRecipients = filterRecipients(userInput);
+    
+    if (filteredRecipients.length === 0) {
+        console.log("No valid recipients found.");
+        return;
+    }
+
+    // Simulate user selecting the recipient from the filtered list
+    const reciever = prompt(`Select recipient: ${filteredRecipients.join(", ")}`);
+    if (!reciever || !filteredRecipients.includes(reciever)) {
+        console.log("Invalid recipient selected.");
+        return;
+    }
+
+    // Assuming the selected character and item name have been initialized elsewhere
+    
+    itemName = itemN;
+    itemId = itemI;
+
+    const itemIndex = inventory[selectedCharacter]?.findIndex(item => item.name === itemName && item.id === itemId);
+    if (itemIndex === -1 || !inventory[selectedCharacter] || !inventory[selectedCharacter][itemIndex]) {
+        console.log(`${selectedCharacter} doesn't have any ${itemName}(s) to give.`);
+        return;
+    }
+
+    let availableQuantity = inventory[selectedCharacter][itemIndex].quantity;
+    console.log(`Available quantity: ${availableQuantity}`);
+
+    // Ask how many to give if more than 1
+    let quantityToGive = 1;
+    if (availableQuantity > 1) {
+        quantityToGive = parseInt(prompt(`How many ${itemName}(s) would you like to give? (Max: ${availableQuantity})`), 10);
+        if (isNaN(quantityToGive) || quantityToGive < 1) {
+            console.log("Invalid quantity.");
+            return;
+        }
+        if (quantityToGive > availableQuantity) {
+            quantityToGive = availableQuantity;
+        }
+    }
+
+    // Initialize the recipient's inventory if necessary
+    if (!inventory[reciever]) {
+        inventory[reciever] = [];
+    }
+
+    // Find if the receiver has the same item
+    let recieverItemIndex = inventory[reciever].findIndex(item => {
+        const recieverItemStatsString = JSON.stringify(item.stats || {});  // Empty object if stats are undefined
+        const selectedItemStatsString = JSON.stringify(inventory[selectedCharacter][itemIndex].stats || {});
+        
+        // Log stats comparison for debugging
+        console.log("Comparing item stats:");
+        console.log("Recipient's item stats:", recieverItemStatsString);
+        console.log("Selected item's stats:", selectedItemStatsString);
+
+        return item.name === itemName && recieverItemStatsString === selectedItemStatsString;
+    });
+   
+    
+    if (recieverItemIndex !== -1) {
+        console.log("Compare: copies found")
+        // If the recipient has the same item, stack the quantity
+        inventory[reciever][recieverItemIndex].quantity += quantityToGive;
+    } else {
+        console.log("Compare: no copies found")
+        // Create a new item with the lowest possible unique ID for the recipient
+        let idNumbers = inventory[reciever]
+            .filter(item => item.name === itemName)  // Only consider items with the same name
+            .map(item => parseInt(item.id.split("_")[0], 10));  // Extract the numeric part before "_reciever"
+
+        let newIdNumber = 1;
+        while (idNumbers.includes(newIdNumber)) {
+            newIdNumber++;  // Increment until we find the lowest available number
+        }
+
+        let newId = `${newIdNumber}_${reciever}`;
+        let newItem = { ...inventory[selectedCharacter][itemIndex] };  // Clone the item from the sender
+        newItem.id = newId;  // Assign the new unique ID
+        newItem.quantity = quantityToGive;
+
+        inventory[reciever].push(newItem);
+    }
+
+    // Subtract the given quantity from the sender's inventory
+    inventory[selectedCharacter][itemIndex].quantity -= quantityToGive;
+    if (inventory[selectedCharacter][itemIndex].quantity <= 0) {
+        inventory[selectedCharacter].splice(itemIndex, 1);  // Remove the item if none left
+        //TODO: Maybe ask if you should remove the item, in case it's like gold coins or something, you already have a function for this
+    }
+
+    // Save the game state
+    saveGameState();
+    
+    console.log(`Gave ${quantityToGive} ${itemName}(s) to ${reciever}.`);
+    updateCharacterDetails();
+}
+
+
+
