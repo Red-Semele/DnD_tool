@@ -2211,11 +2211,8 @@ function giveItem(itemN, itemI) {
     }
 
     // Simulate user selecting the recipient from the filtered list
-    const reciever = prompt(`Select recipient: ${filteredRecipients.join(", ")}`);
-    if (!reciever || !filteredRecipients.includes(reciever)) {
-        console.log("Invalid recipient selected.");
-        return;
-    }
+    const reciever = filteredRecipients
+   
 
     // Assuming the selected character and item name have been initialized elsewhere
     
