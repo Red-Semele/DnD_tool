@@ -2258,15 +2258,39 @@ function giveItem(itemN, itemI) {
 
         return item.name === itemName && recieverItemStatsString === selectedItemStatsString;
     });
+
+   
    
     
     if (recieverItemIndex !== -1) {
         console.log("Compare: copies found")
         // If the recipient has the same item, stack the quantity
         inventory[reciever][recieverItemIndex].quantity += quantityToGive;
+        //TODO: Add a prompt to keep or delete the notes for the other person.
+        //TODO: check if the note stuff works.
+        let selectedCharacterNoteId = generateNoteId("items", itemName, itemId);
+        let selectedItemNotes = itemNotes.filter(note => note.id === selectedCharacterNoteId);
+
+        if (selectedItemNotes.length > 0) {
+            selectedItemNotes.forEach(note => {
+                let newNoteId = generateNoteId("items", itemName, inventory[reciever][recieverItemIndex].id);
+                
+                // Check if a note with the same content already exists for the recipient
+                let duplicateNoteExists = itemNotes.some(existingNote => 
+                    existingNote.id === newNoteId && existingNote.content === note.content
+                );
+
+                if (!duplicateNoteExists) {
+                    let clonedNote = { ...note, id: newNoteId };  // Clone the note and update its ID
+                    itemNotes.push(clonedNote);  // Add the cloned note to the itemNotes array
+                }
+            });
+        }
+        
     } else {
         console.log("Compare: no copies found")
         // Create a new item with the lowest possible unique ID for the recipient
+        //TODO: Add a prompt to merge the notes or remove either one of them.
         let idNumbers = inventory[reciever]
             .filter(item => item.name === itemName)  // Only consider items with the same name
             .map(item => parseInt(item.id.split("_")[0], 10));  // Extract the numeric part before "_reciever"
@@ -2282,6 +2306,28 @@ function giveItem(itemN, itemI) {
         newItem.quantity = quantityToGive;
 
         inventory[reciever].push(newItem);
+        // Clone the notes to the new item
+        let selectedCharacterNoteId = generateNoteId("items", itemName, itemId);
+        let selectedItemNotes = itemNotes.filter(note => note.id === selectedCharacterNoteId);
+
+        //TODO: check if the notestuff works. (It works but it creates a lot of duplicates as you move it back and forth, I should probably fix that.)
+        if (selectedItemNotes.length > 0) {
+            selectedItemNotes.forEach(note => {
+                let newNoteId = generateNoteId("items", itemName, newId);
+
+                // Check if a note with the same content already exists for the recipient
+                let duplicateNoteExists = itemNotes.some(existingNote => 
+                    existingNote.id === newNoteId && existingNote.content === note.content
+                );
+
+                if (!duplicateNoteExists) {
+                    let clonedNote = { ...note, id: newNoteId };  // Clone the note and update its ID
+                    itemNotes.push(clonedNote);  // Add the cloned note to the itemNotes array
+                }
+            });
+        }
+
+        console.log("Cloned notes for the new item:", JSON.stringify(selectedItemNotes));
     }
 
     // Subtract the given quantity from the sender's inventory
@@ -2295,6 +2341,7 @@ function giveItem(itemN, itemI) {
     saveGameState();
     
     console.log(`Gave ${quantityToGive} ${itemName}(s) to ${reciever}.`);
+    console.log(JSON.stringify(itemNotes) + "NOTESNOTES2")
     updateCharacterDetails();
 }
 
