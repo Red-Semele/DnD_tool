@@ -2272,19 +2272,23 @@ function giveItem(itemN, itemI) {
         let selectedItemNotes = itemNotes.filter(note => note.id === selectedCharacterNoteId);
 
         if (selectedItemNotes.length > 0) {
-            selectedItemNotes.forEach(note => {
-                let newNoteId = generateNoteId("items", itemName, inventory[reciever][recieverItemIndex].id);
-                
-                // Check if a note with the same content already exists for the recipient
-                let duplicateNoteExists = itemNotes.some(existingNote => 
-                    existingNote.id === newNoteId && existingNote.content === note.content
-                );
-
-                if (!duplicateNoteExists) {
-                    let clonedNote = { ...note, id: newNoteId };  // Clone the note and update its ID
-                    itemNotes.push(clonedNote);  // Add the cloned note to the itemNotes array
-                }
-            });
+            let copyNotePrompt = prompt("Do you want to add extra notes from the given item to the recieved item? y/n")
+            if (copyNotePrompt === "y") {
+                selectedItemNotes.forEach(note => {
+                    let newNoteId = generateNoteId("items", itemName, inventory[reciever][recieverItemIndex].id);
+                    
+                    // Check if a note with the same content already exists for the recipient
+                    let duplicateNoteExists = itemNotes.some(existingNote => 
+                        existingNote.id === newNoteId && existingNote.content === note.content
+                    );
+    
+                    if (!duplicateNoteExists) {
+                        let clonedNote = { ...note, id: newNoteId };  // Clone the note and update its ID
+                        itemNotes.push(clonedNote);  // Add the cloned note to the itemNotes array
+                    }
+                });
+            }
+            
         }
         
     } else {
@@ -2312,19 +2316,24 @@ function giveItem(itemN, itemI) {
 
         //TODO: check if the notestuff works. (It works but it creates a lot of duplicates as you move it back and forth, I should probably fix that.)
         if (selectedItemNotes.length > 0) {
-            selectedItemNotes.forEach(note => {
-                let newNoteId = generateNoteId("items", itemName, newId);
-
-                // Check if a note with the same content already exists for the recipient
-                let duplicateNoteExists = itemNotes.some(existingNote => 
-                    existingNote.id === newNoteId && existingNote.content === note.content
-                );
-
-                if (!duplicateNoteExists) {
-                    let clonedNote = { ...note, id: newNoteId };  // Clone the note and update its ID
-                    itemNotes.push(clonedNote);  // Add the cloned note to the itemNotes array
-                }
-            });
+           
+            let copyNotePrompt = prompt("Do you want to copy the notes over alongside the given item? y/n")
+            if (copyNotePrompt === "y") {
+                selectedItemNotes.forEach(note => {
+                    let newNoteId = generateNoteId("items", itemName, newId);
+    
+                    // Check if a note with the same content already exists for the recipient
+                    let duplicateNoteExists = itemNotes.some(existingNote => 
+                        existingNote.id === newNoteId && existingNote.content === note.content
+                    );
+    
+                    if (!duplicateNoteExists) {
+                        let clonedNote = { ...note, id: newNoteId };  // Clone the note and update its ID
+                        itemNotes.push(clonedNote);  // Add the cloned note to the itemNotes array
+                    }
+                });
+            }
+            
         }
 
         console.log("Cloned notes for the new item:", JSON.stringify(selectedItemNotes));
