@@ -787,24 +787,27 @@ function generateAchievementItemHtml(achievement) {
             <button onclick="console.log('Clicked Read Notes button for skill:', '${achievement.name.replace("'", "\\'")}'); readNotesModalHandler('achievements', '${achievement.name.replace("'", "\\'")}', '${achievement.id}')">Read Notes</button>
         </li>`;
 }
-
+//TODO: Problems fix them.
 bestLoadoutForm.addEventListener('submit', (e) => {
-    console.log("L")
+    console.log("L");
     e.preventDefault();
     const character = loadoutCharacterSelect.value;
     const stat = document.getElementById('loadout-stat').value;
 
-    const bestItems = {};
-    const bestPartyItems = {};
+    let bestItems = {};
+    let bestPartyItems = {};
 
     // Function to find the best item considering items in inventory and in folders
     function findBestItem(itemsArray) {
-        const bestItem = {};
+        let bestItem = {};
 
         itemsArray.forEach(item => {
             if ((!item.slot || item.slot === '') && (!item.stat || item.stat === '')) return; // Skip items without slot and stat
-            if (!bestItem[item.slot]) bestItem[item.slot] = item;
-            else if (item.value > bestItem[item.slot].value) bestItem[item.slot] = item;
+            const statObj = item.stats.find(s => s.stat === stat); // Find the correct stat in the item stats
+            if (!statObj) return; // Skip if the item doesn't have the stat we're looking for
+            
+            if (!bestItem[item.slot]) bestItem[item.slot] = { ...item, value: statObj.value }; // Assign item with value
+            else if (statObj.value > bestItem[item.slot].value) bestItem[item.slot] = { ...item, value: statObj.value };
         });
 
         return bestItem;
@@ -823,14 +826,22 @@ bestLoadoutForm.addEventListener('submit', (e) => {
     for (const char in inventory) {
         inventory[char].forEach(item => {
             if ((!item.slot || item.slot === '') && (!item.stat || item.stat === '')) return; // Skip items without slot and stat
-            if (!bestPartyItems[item.slot]) bestPartyItems[item.slot] = item;
-            else if (item.value > bestPartyItems[item.slot].value) bestPartyItems[item.slot] = item;
+            const statObj = item.stats.find(s => s.stat === stat); // Find the correct stat in the item stats
+            if (!statObj) return; // Skip if the item doesn't have the stat we're looking for
+            
+            if (!bestPartyItems[item.slot]) bestPartyItems[item.slot] = { ...item, value: statObj.value }; // Assign item with value
+            else if (statObj.value > bestPartyItems[item.slot].value) bestPartyItems[item.slot] = { ...item, value: statObj.value };
         });
 
         // Also include items from characterFolders[selectedCharacter] of other characters in the party
         if (char !== character) {
             characterFolders[selectedCharacter].filter(folder => folder.type === 'items').forEach(folder => {
-                bestPartyItems[folder.name] = findBestItem(folder.items)[folder.name];
+                const folderBestItem = findBestItem(folder.items);
+                Object.keys(folderBestItem).forEach(slot => {
+                    if (!bestPartyItems[slot] || folderBestItem[slot].value > bestPartyItems[slot].value) {
+                        bestPartyItems[slot] = folderBestItem[slot];
+                    }
+                });
             });
         }
     }
@@ -850,6 +861,7 @@ bestLoadoutForm.addEventListener('submit', (e) => {
     // Display the results
     bestLoadoutResult.innerHTML = bestItemsHtml + bestPartyItemsHtml;
 });
+
 
 addNoteForm.addEventListener('submit', (e) => {
     console.log("M")
