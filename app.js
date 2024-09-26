@@ -2134,7 +2134,7 @@ function selectSaveFile() {
     const dropdown = document.getElementById('saveFileDropdown');
     currentSaveFile = dropdown.value;
     if (currentSaveFile) {
-        alert('Selected save file: ' + currentSaveFile);
+        alert('Selected save file: ' + currentSaveFile)
     } else {
         alert('No save file selected.');
     }
@@ -2365,6 +2365,55 @@ function giveItem(itemN, itemI) {
     console.log(JSON.stringify(itemNotes) + "NOTESNOTES2")
     updateCharacterDetails();
 }
+
+
+// Early attempt at a search function with improvements for arrays and objects. (Still doesn't work. Will need a lot of work.)
+
+function searchData() {
+    const searchValue = document.getElementById("searchInput").value.toLowerCase().trim();
+    const resultsDiv = document.getElementById("results");
+    let results = '';
+    const searchState = JSON.parse(savedState);
+
+    // Check if the characters array exists and is not undefined
+    if (searchState.characters && Array.isArray(searchState.characters)) {
+        // Search in characters
+        results += '<h2>Characters</h2>';
+        searchState.characters.forEach(character => {
+            const words = character.toLowerCase().split(" ");
+            if (words.some(word => word.startsWith(searchValue))) {
+                results += `<p>${character}</p>`;
+            }
+        });
+    } else {
+        results += '<p>Characters data not found.</p>';
+    }
+
+    // Search inventory items
+    results += '<h2>Inventory</h2>';
+    for (const character in searchState.inventory) {
+        searchState.inventory[character].forEach(item => {
+            const words = item.name.toLowerCase().split(" ");
+            if (words.some(word => word.startsWith(searchValue))) {
+                results += `<p>${item.name} (Owned by: ${character})</p>`;
+            }
+        });
+    }
+
+    // Search item notes
+    results += '<h2>Item Notes</h2>';
+    searchState.itemNotes.forEach(note => {
+        const titleWords = note.title.toLowerCase().split(" ");
+        const contentWords = note.content.toLowerCase().split(" ");
+        if (titleWords.some(word => word.startsWith(searchValue)) || contentWords.some(word => word.startsWith(searchValue))) {
+            results += `<p>Item: ${note.title} - Note: ${note.content}</p>`;
+        }
+    });
+
+    // Show results or 'no results found'
+    resultsDiv.innerHTML = results ? results : '<p>No results found</p>';
+}
+
 
 
 
