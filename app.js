@@ -2367,52 +2367,99 @@ function giveItem(itemN, itemI) {
 }
 
 
-// Early attempt at a search function with improvements for arrays and objects. (Still doesn't work. Will need a lot of work.)
+// TODO: Probably only make text appear after typing atleast 1 letter, maybe 2. Also add achievements, titles etc. But also add the ability to search all types or 1 type.
 
 function searchData() {
     const searchValue = document.getElementById("searchInput").value.toLowerCase().trim();
     const resultsDiv = document.getElementById("results");
     let results = '';
     const searchState = JSON.parse(savedState);
+    const selectedCategory = document.getElementById("searchCategory").value; // Get selected category
 
     // Check if the characters array exists and is not undefined
-    if (searchState.characters && Array.isArray(searchState.characters)) {
-        // Search in characters
-        results += '<h2>Characters</h2>';
-        searchState.characters.forEach(character => {
-            const words = character.toLowerCase().split(" ");
-            if (words.some(word => word.startsWith(searchValue))) {
-                results += `<p>${character}</p>`;
-            }
-        });
-    } else {
-        results += '<p>Characters data not found.</p>';
+    if (selectedCategory === "all" || selectedCategory === "characters") {
+        if (searchState.characters && Array.isArray(searchState.characters)) {
+            results += '<h2>Characters</h2>';
+            searchState.characters.forEach(character => {
+                const words = character.toLowerCase().split(" ");
+                if (words.some(word => word.startsWith(searchValue))) {
+                    results += `<p>${character}</p>`;
+                }
+            });
+        } else {
+            results += '<p>Characters data not found.</p>';
+        }
     }
 
     // Search inventory items
-    results += '<h2>Inventory</h2>';
-    for (const character in searchState.inventory) {
-        searchState.inventory[character].forEach(item => {
-            const words = item.name.toLowerCase().split(" ");
-            if (words.some(word => word.startsWith(searchValue))) {
-                results += `<p>${item.name} (Owned by: ${character})</p>`;
+    if (selectedCategory === "all" || selectedCategory === "inventory") {
+        results += '<h2>Inventory</h2>';
+        for (const character in searchState.inventory) {
+            searchState.inventory[character].forEach(item => {
+                const words = item.name.toLowerCase().split(" ");
+                if (words.some(word => word.startsWith(searchValue))) {
+                    results += `<p>${item.name} (Owned by: ${character})</p>`;
+                }
+            });
+        }
+    }
+
+    // Search item notes
+    if (selectedCategory === "all" || selectedCategory === "itemNotes") {
+        results += '<h2>Item Notes</h2>';
+        searchState.itemNotes.forEach(note => {
+            const titleWords = note.title.toLowerCase().split(" ");
+            const contentWords = note.content.toLowerCase().split(" ");
+            if (titleWords.some(word => word.startsWith(searchValue)) || contentWords.some(word => word.startsWith(searchValue))) {
+                results += `<p>Item: ${note.title} - Note: ${note.content}</p>`;
             }
         });
     }
 
-    // Search item notes
-    results += '<h2>Item Notes</h2>';
-    searchState.itemNotes.forEach(note => {
-        const titleWords = note.title.toLowerCase().split(" ");
-        const contentWords = note.content.toLowerCase().split(" ");
-        if (titleWords.some(word => word.startsWith(searchValue)) || contentWords.some(word => word.startsWith(searchValue))) {
-            results += `<p>Item: ${note.title} - Note: ${note.content}</p>`;
+    // Search skills
+    if (selectedCategory === "all" || selectedCategory === "skills") {
+        results += '<h2>Skills</h2>';
+        for (const character in searchState.characterSkills) {
+            searchState.characterSkills[character].forEach(skill => {
+                const words = skill.name.toLowerCase().split(" ");
+                if (words.some(word => word.startsWith(searchValue))) {
+                    results += `<p>${skill.name} (Owned by: ${character})</p>`;
+                }
+            });
         }
-    });
+    }
+
+    // Search achievements
+    if (selectedCategory === "all" || selectedCategory === "achievements") {
+        results += '<h2>Achievements</h2>';
+        for (const character in searchState.characterAchievements) {
+            searchState.characterAchievements[character].forEach(achievement => {
+                const words = achievement.name.toLowerCase().split(" ");
+                if (words.some(word => word.startsWith(searchValue))) {
+                    results += `<p>${achievement.name} (Owned by: ${character})</p>`;
+                }
+            });
+        }
+    }
+
+    // Search titles
+    if (selectedCategory === "all" || selectedCategory === "titles") {
+        results += '<h2>Titles</h2>';
+        for (const character in searchState.characterTitles) {
+            searchState.characterTitles[character].forEach(title => {
+                const words = title.name.toLowerCase().split(" ");
+                if (words.some(word => word.startsWith(searchValue))) {
+                    results += `<p>${title.name} (Owned by: ${character})</p>`;
+                }
+            });
+        }
+    }
 
     // Show results or 'no results found'
     resultsDiv.innerHTML = results ? results : '<p>No results found</p>';
+    console.log(JSON.stringify(searchState.characterAchievements) + " Achievements." + JSON.stringify(searchState.characterTitles) + " Titles" + JSON.stringify(searchState.characterSkills) + " Skills.");
 }
+
 
 
 

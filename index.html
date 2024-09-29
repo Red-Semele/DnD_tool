@@ -329,7 +329,15 @@
                 <button type="submit">Find Best Loadout</button>
             </form>
             <div id="best-loadout-result"></div>
-
+            <select id="searchCategory">
+                <option value="all">All</option>
+                <option value="characters">Characters</option>
+                <option value="inventory">Inventory</option>
+                <option value="itemNotes">Item Notes</option>
+                <option value="skills">Skills</option>
+                <option value="achievements">Achievements</option>
+                <option value="titles">Titles</option>
+            </select>
             <div class="search-bar">
                 <input type="text" id="searchInput" placeholder="Search characters, items, etc." onkeyup="searchData()" style="width: 100%; padding: 10px;">
             </div>
