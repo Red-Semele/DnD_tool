@@ -86,7 +86,12 @@ let currentNoteId = '';
 let lowest = ""
 let highest = ""
 let sortedRolls = ""
-
+const customDice = {
+    c: [1, 1, 1, 6, 6, 6],
+    ca: [0,0]
+    // You can add more custom dice here
+    // example: 'anotherdice': [value1, value2, ..., valueN]
+};
 
 // Folder data structure
 //const folders = [];
@@ -1358,9 +1363,10 @@ function diceLogic(skillCalled) {
     }
 
     // Updated regex to include all dice notations and modifiers
-    //const diceNotationRegex = /(\d+d\d+)([khld][hld]?\d+|[khld][><=]=?\d+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(m\d+)?(e[><=]=?\d+)?/g;
     
-    const diceNotationRegex = /(\d+d\d+)((?:[khld][><=]?\d+|[khld][hld]\d+|m\d+)+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(e[><=]=?\d+)?/g;
+    
+    //const diceNotationRegex = /(\d+d\d+)((?:[khld][><=]?\d+|[khld][hld]\d+|m\d+)+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(e[><=]=?\d+)?/g;
+    const diceNotationRegex = /(\d+d\d+|\d+c_\w+)((?:[khld][><=]?\d+|[khld][hld]\d+|m\d+)+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(e[><=]=?\d+)?/g;
 
     // Regex to match character attributes (e.g., Ernhart.charisma)
     const attributeRegex = /(\w+)\.(\w+)/g;
@@ -1387,9 +1393,19 @@ function diceLogic(skillCalled) {
         }
     });
 
+
+   
+
     // Function to roll dice and return results
     function rollDice(numDice, diceType) {
         return Array.from({ length: numDice }, () => Math.floor(Math.random() * diceType) + 1);
+    }
+
+    function rollCustomDice(numDice, customDiceValues) {
+        return Array.from({ length: numDice }, () => {
+            const randomIndex = Math.floor(Math.random() * customDiceValues.length);
+            return customDiceValues[randomIndex];
+        });
     }
 
     // Function to apply a single modifier and return the modified rolls
@@ -1404,6 +1420,7 @@ function diceLogic(skillCalled) {
             const action = match[1];
             const operator = match[2];
             const value = parseInt(match[3], 10);
+            console.log("1" + action + "2" +  operator + "3" + value + "MAAATH")
 
             switch (action) {
                 case 'k': // Keep
@@ -1504,11 +1521,52 @@ function diceLogic(skillCalled) {
     
 
     // Function to evaluate dice notation with modifiers
-    function evaluateDiceNotation(diceNotation) {
+   // Function to evaluate dice notation with modifiers
+// Function to evaluate dice notation with modifiers
+function evaluateDiceNotation(diceNotation) {
+    // Capture custom dice notation followed by modifiers
+    const customDiceNames = Object.keys(customDice).sort((a, b) => b.length - a.length); // Sort by length, longest first
+    
+    // Updated regex to capture custom dice followed by modifiers
+    const customDiceRegex = new RegExp(`(\\d+)c_(${customDiceNames.join('|')})\\s*([khld][><=]?\\d+)?(.*)?`);
+
+    // Check if the dice notation is a custom dice
+    if (customDiceRegex.test(diceNotation)) {
+        const match = diceNotation.match(customDiceRegex);
+
+        if (match) {
+            const numDice = parseInt(match[1], 10); // Get number of dice
+            const customDiceName = match[2]; // Get the custom dice name
+            const customDiceValues = customDice[customDiceName]; // Get the custom dice array
+
+            if (!customDiceValues) {
+                throw new Error(`Invalid custom dice name: ${customDiceName}`);
+            }
+
+            const rolls = rollCustomDice(numDice, customDiceValues); // Roll the custom dice
+            
+            // Extract the modifiers and pass them separately
+            let modifier = match[3] || ''; // First modifier
+            let additionalModifiers = match[4] ? match[4].trim() : ''; // Additional modifiers
+            
+            // Combine all modifiers and apply them to the dice rolls
+            if (modifier || additionalModifiers) {
+                const fullModifiers = `${modifier} ${additionalModifiers}`.trim(); // Combine all modifiers
+                return applyModifiers(rolls, fullModifiers); // Apply the modifiers
+            }
+
+            return rolls; // Return rolls if no modifiers are present
+        }
+    } else {
+        // Handle regular dice (e.g., 2d6)
         const [numDice, diceType] = diceNotation.split('d').map(Number);
-        const rolls = rollDice(numDice, diceType);
-        return rolls;
+        return rollDice(numDice, diceType);
     }
+
+    throw new Error(`Invalid dice notation: ${diceNotation}`);
+}
+
+
 
     // Function to evaluate the entire expression
     function evaluateExpression(expression, variables) {
@@ -1525,6 +1583,7 @@ function diceLogic(skillCalled) {
             if (varValue === undefined) {
                 throw new Error(`Undefined variable: ${match}`);
             }
+            console.log("Test5" + varValue)
             return varValue;
         });
 
@@ -1536,7 +1595,7 @@ function diceLogic(skillCalled) {
             expression = expression.replace(diceNotationRegex, (match, diceNotation, modifier, successCriteria, failureCriteria, criticalSuccessCriteria, criticalFailureCriteria, multiples, exploding) => {
                 const rolls = evaluateDiceNotation(diceNotation);
                 let tempRolls = rolls;
-
+                console.log("MopsieNopsie dicenotation test busy." + diceNotation +"EE" + modifier)
                 // Apply all parts of the modifier
                 if (modifier) {
                     console.log("Modi" + modifier)
@@ -1573,6 +1632,7 @@ function diceLogic(skillCalled) {
                         const value = parseInt(failureMatch[2], 10);
                         resultValue = tempRolls.filter(roll => compare(roll, operator, value)).length;
                         modifiedRolls = tempRolls.filter(roll => compare(roll, operator, value));
+                        console.log("Mod" + modifiedRolls)
                     }
                 }
 
@@ -1584,6 +1644,7 @@ function diceLogic(skillCalled) {
                         const value = parseInt(criticalSuccessMatch[2], 10);
                         resultValue = tempRolls.filter(roll => compare(roll, operator, value)).length;
                         modifiedRolls = tempRolls.filter(roll => compare(roll, operator, value));
+                        console.log("Mod" + modifiedRolls)
                     }
                 }
 
@@ -1595,6 +1656,7 @@ function diceLogic(skillCalled) {
                         const value = parseInt(criticalFailureMatch[2], 10);
                         resultValue = tempRolls.filter(roll => compare(roll, operator, value)).length;
                         modifiedRolls = tempRolls.filter(roll => compare(roll, operator, value));
+                        console.log("Mod" + modifiedRolls)
                         
                     }
                 }
@@ -1607,6 +1669,7 @@ function diceLogic(skillCalled) {
                         const numMultiples = parseInt(multipleMatch[1], 10);
                         const rollCounts = tempRolls.reduce((counts, roll) => {
                             counts[roll] = (counts[roll] || 0) + 1;
+                            console.log("Mod" + modifiedRolls)
                             return counts;
                         }, {});
                         resultValue = Object.values(rollCounts).filter(count => count >= numMultiples).length;
@@ -1624,7 +1687,7 @@ function diceLogic(skillCalled) {
                 return resultValue;
             });
         }
-
+        console.log(expression)
         return eval(expression);
     }
 
@@ -1652,8 +1715,10 @@ function diceLogic(skillCalled) {
     let breakdown = [];
 
     try {
+        console.log("MopsieNopsie Test" + JSON.stringify(variables) + modifiedInput)
         const evaluatedExpression = evaluateExpression(modifiedInput, variables);
         finalTotal = evaluatedExpression;
+        console.log(evaluatedExpression + "MOPSIENOPSIE")
     } catch (error) {
         console.log(error + "Error" + modifiedInput + JSON.stringify(variables));
         diceRollResult.textContent = 'Invalid dice notation or math expression.';
