@@ -1454,9 +1454,10 @@ function diceLogic(skillCalled) {
     
         // Get the number of dice (default to 1 if not specified)
         const numDiceParsed = match[1] ? Number(match[1]) : 1;
-        let diceType = match[2];  // This can be a number, custom name, or 'F' for fudge dice
+        let initialDiceType = match[2];  // This can be a number, custom name, or 'F' for fudge dice
+        let diceType = ""
         
-        console.log("Initial Dice Type: " + diceType);
+        console.log("Initial Dice Type: " + initialDiceType);
     
         // Step 1: Find the longest matching custom dice name
         let longestMatch = "";
@@ -1468,17 +1469,25 @@ function diceLogic(skillCalled) {
         
         if (longestMatch) {
             diceType = longestMatch; // Use the longest custom dice name
-            console.log("Using custom dice: " + diceType);
-        } else if (diceType.includes('F')) {
+            console.log("Using custom dice: " + initialDiceType);
+        } else if (initialDiceType.includes('F')) {
             diceType = 'F'; // Handle fudge dice separately
             console.log("Using fudge dice");
-        } else if (isNaN(diceType)) {
+        } else if (isNaN(initialDiceType)) {
             throw new Error(`Invalid dice type: ${diceType}`);
         } else {
             console.log("Using regular numeric dice: d" + diceType);
+            diceType = initialDiceType
+            
         }
-    
+        console.log("Finished diceType: " + diceType);
         // Roll the dice based on the numDiceParsed and diceType (custom, fudge, or numeric)
+        if (initialDiceType !== diceType) {
+            // Extract any modifiers after the initial dice type
+            remainingModifiers = initialDiceType.replace(diceType, '');
+            console.log("MODIF" + remainingModifiers)
+
+        }
         const rolls = rollDice(numDiceParsed, diceType);
         
         return rolls;
@@ -1742,6 +1751,7 @@ function diceLogic(skillCalled) {
 
     try {
         const evaluatedExpression = evaluateExpression(modifiedInput, variables);
+        console.log("Evaluatecheck" + modifiedInput)
         finalTotal = evaluatedExpression;
     } catch (error) {
         console.log(error + "Error" + modifiedInput + JSON.stringify(variables));
