@@ -1345,6 +1345,8 @@ function updateSelect(type) {
     }
 }
 
+
+
 rollDiceForm.addEventListener('submit', (e) => {
     e.preventDefault();
     diceLogic('noSkill')
@@ -1363,10 +1365,13 @@ function diceLogic(skillCalled) {
     }
 
     // Updated regex to include all dice notations and modifiers
-    
+    //const diceNotationRegex = /(\d+d\d+)([khld][hld]?\d+|[khld][><=]=?\d+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(m\d+)?(e[><=]=?\d+)?/g;
     
     //const diceNotationRegex = /(\d+d\d+)((?:[khld][><=]?\d+|[khld][hld]\d+|m\d+)+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(e[><=]=?\d+)?/g;
-    const diceNotationRegex = /(\d+d\d+|\d+c_\w+)((?:[khld][><=]?\d+|[khld][hld]\d+|m\d+)+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(e[><=]=?\d+)?/g;
+    //const diceNotationRegex = /(\d+d\d+|\d+dF)((?:[khld][><=]?\d+|[khld][hld]\d+|m\d+)+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(e[><=]=?\d+)?/g;
+    //const diceNotationRegex = /(\d*d\d+|\d+dF|[a-zA-Z_][a-zA-Z0-9_]*)([khld][><=]?(\d+)|[khld][hld]\d+|m\d+)?(cs[><=]?(\d+))?(cf[><=]?(\d+))?(ccs[><=]?(\d+))?(ccf[><=]?(\d+))?(e[><=]?(\d+))?/g;
+    const diceNotationRegex = /(\d*d[a-zA-Z_][a-zA-Z0-9_]*|\d+dF|\d+d\d+)([khld][><=]?(\d+)|[khld][hld]\d+|m\d+)?(cs[><=]?(\d+))?(cf[><=]?(\d+))?(ccs[><=]?(\d+))?(ccf[><=]?(\d+))?(e[><=]?(\d+))?/g;
+
 
     // Regex to match character attributes (e.g., Ernhart.charisma)
     const attributeRegex = /(\w+)\.(\w+)/g;
@@ -1393,20 +1398,93 @@ function diceLogic(skillCalled) {
         }
     });
 
-
-   
-
-    // Function to roll dice and return results
     function rollDice(numDice, diceType) {
+        console.log('CUSTOM!')
+        console.log(diceType)
+        console.log(customDice[diceType])
+        if (customDice[diceType]) {
+            console.log('CUSTOM!')
+            return rollCustomDice(numDice, diceType);
+        }
+
+        // Check if the diceType is a string and specifically handle 'F'
+        if (diceType === 'F') {
+            return Array.from({ length: numDice }, () => {
+                return Math.floor(Math.random() * 3) - 1; // Generates -1, 0, or +1
+            });
+        }
+    
+        // Ensure other dice types are numeric
+        if (isNaN(diceType)) {
+            throw new Error(`Invalid dice type: ${diceType}`);
+        }
+    
         return Array.from({ length: numDice }, () => Math.floor(Math.random() * diceType) + 1);
     }
 
-    function rollCustomDice(numDice, customDiceValues) {
-        return Array.from({ length: numDice }, () => {
-            const randomIndex = Math.floor(Math.random() * customDiceValues.length);
-            return customDiceValues[randomIndex];
-        });
+
+    function rollCustomDice(numDice, diceName) {
+        if (!customDice[diceName]) {
+            throw new Error(`Custom dice "${diceName}" is not defined.`);
+        }
+        
+        const sides = customDice[diceName];
+        const rolls = [];
+    
+        for (let i = 0; i < numDice; i++) {
+            // Roll a random index from the custom dice array
+            const rollIndex = Math.floor(Math.random() * sides.length);
+            rolls.push(sides[rollIndex]);
+        }
+    
+        return rolls;
     }
+    
+    // Function to evaluate dice notation with modifiers
+    function evaluateDiceNotation(diceNotation) {
+        console.log(diceNotation);
+        
+        // Regular expression to match number of dice and dice type (standard or custom)
+        const regex = /^(\d*)d(\d+|[a-zA-Z_][a-zA-Z0-9_]*)$/;
+        const match = diceNotation.match(regex);
+        
+        if (!match) {
+            throw new Error("Invalid dice notation");
+        }
+    
+        // Get the number of dice (default to 1 if not specified)
+        const numDiceParsed = match[1] ? Number(match[1]) : 1;
+        let diceType = match[2];  // This can be a number, custom name, or 'F' for fudge dice
+        
+        console.log("Initial Dice Type: " + diceType);
+    
+        // Step 1: Find the longest matching custom dice name
+        let longestMatch = "";
+        Object.keys(customDice).forEach(customName => {
+            if (diceType.includes(customName) && customName.length > longestMatch.length) {
+                longestMatch = customName;
+            }
+        });
+        
+        if (longestMatch) {
+            diceType = longestMatch; // Use the longest custom dice name
+            console.log("Using custom dice: " + diceType);
+        } else if (diceType.includes('F')) {
+            diceType = 'F'; // Handle fudge dice separately
+            console.log("Using fudge dice");
+        } else if (isNaN(diceType)) {
+            throw new Error(`Invalid dice type: ${diceType}`);
+        } else {
+            console.log("Using regular numeric dice: d" + diceType);
+        }
+    
+        // Roll the dice based on the numDiceParsed and diceType (custom, fudge, or numeric)
+        const rolls = rollDice(numDiceParsed, diceType);
+        
+        return rolls;
+    }
+    
+
 
     // Function to apply a single modifier and return the modified rolls
     function applySingleModifier(rolls, modifier) {
@@ -1420,7 +1498,6 @@ function diceLogic(skillCalled) {
             const action = match[1];
             const operator = match[2];
             const value = parseInt(match[3], 10);
-            console.log("1" + action + "2" +  operator + "3" + value + "MAAATH")
 
             switch (action) {
                 case 'k': // Keep
@@ -1520,53 +1597,7 @@ function diceLogic(skillCalled) {
     
     
 
-    // Function to evaluate dice notation with modifiers
-   // Function to evaluate dice notation with modifiers
-// Function to evaluate dice notation with modifiers
-function evaluateDiceNotation(diceNotation) {
-    // Capture custom dice notation followed by modifiers
-    const customDiceNames = Object.keys(customDice).sort((a, b) => b.length - a.length); // Sort by length, longest first
     
-    // Updated regex to capture custom dice followed by modifiers
-    const customDiceRegex = new RegExp(`(\\d+)c_(${customDiceNames.join('|')})\\s*([khld][><=]?\\d+)?(.*)?`);
-
-    // Check if the dice notation is a custom dice
-    if (customDiceRegex.test(diceNotation)) {
-        const match = diceNotation.match(customDiceRegex);
-
-        if (match) {
-            const numDice = parseInt(match[1], 10); // Get number of dice
-            const customDiceName = match[2]; // Get the custom dice name
-            const customDiceValues = customDice[customDiceName]; // Get the custom dice array
-
-            if (!customDiceValues) {
-                throw new Error(`Invalid custom dice name: ${customDiceName}`);
-            }
-
-            const rolls = rollCustomDice(numDice, customDiceValues); // Roll the custom dice
-            
-            // Extract the modifiers and pass them separately
-            let modifier = match[3] || ''; // First modifier
-            let additionalModifiers = match[4] ? match[4].trim() : ''; // Additional modifiers
-            
-            // Combine all modifiers and apply them to the dice rolls
-            if (modifier || additionalModifiers) {
-                const fullModifiers = `${modifier} ${additionalModifiers}`.trim(); // Combine all modifiers
-                return applyModifiers(rolls, fullModifiers); // Apply the modifiers
-            }
-
-            return rolls; // Return rolls if no modifiers are present
-        }
-    } else {
-        // Handle regular dice (e.g., 2d6)
-        const [numDice, diceType] = diceNotation.split('d').map(Number);
-        return rollDice(numDice, diceType);
-    }
-
-    throw new Error(`Invalid dice notation: ${diceNotation}`);
-}
-
-
 
     // Function to evaluate the entire expression
     function evaluateExpression(expression, variables) {
@@ -1583,7 +1614,6 @@ function evaluateDiceNotation(diceNotation) {
             if (varValue === undefined) {
                 throw new Error(`Undefined variable: ${match}`);
             }
-            console.log("Test5" + varValue)
             return varValue;
         });
 
@@ -1595,7 +1625,7 @@ function evaluateDiceNotation(diceNotation) {
             expression = expression.replace(diceNotationRegex, (match, diceNotation, modifier, successCriteria, failureCriteria, criticalSuccessCriteria, criticalFailureCriteria, multiples, exploding) => {
                 const rolls = evaluateDiceNotation(diceNotation);
                 let tempRolls = rolls;
-                console.log("MopsieNopsie dicenotation test busy." + diceNotation +"EE" + modifier)
+
                 // Apply all parts of the modifier
                 if (modifier) {
                     console.log("Modi" + modifier)
@@ -1632,7 +1662,6 @@ function evaluateDiceNotation(diceNotation) {
                         const value = parseInt(failureMatch[2], 10);
                         resultValue = tempRolls.filter(roll => compare(roll, operator, value)).length;
                         modifiedRolls = tempRolls.filter(roll => compare(roll, operator, value));
-                        console.log("Mod" + modifiedRolls)
                     }
                 }
 
@@ -1644,7 +1673,6 @@ function evaluateDiceNotation(diceNotation) {
                         const value = parseInt(criticalSuccessMatch[2], 10);
                         resultValue = tempRolls.filter(roll => compare(roll, operator, value)).length;
                         modifiedRolls = tempRolls.filter(roll => compare(roll, operator, value));
-                        console.log("Mod" + modifiedRolls)
                     }
                 }
 
@@ -1656,7 +1684,6 @@ function evaluateDiceNotation(diceNotation) {
                         const value = parseInt(criticalFailureMatch[2], 10);
                         resultValue = tempRolls.filter(roll => compare(roll, operator, value)).length;
                         modifiedRolls = tempRolls.filter(roll => compare(roll, operator, value));
-                        console.log("Mod" + modifiedRolls)
                         
                     }
                 }
@@ -1669,7 +1696,6 @@ function evaluateDiceNotation(diceNotation) {
                         const numMultiples = parseInt(multipleMatch[1], 10);
                         const rollCounts = tempRolls.reduce((counts, roll) => {
                             counts[roll] = (counts[roll] || 0) + 1;
-                            console.log("Mod" + modifiedRolls)
                             return counts;
                         }, {});
                         resultValue = Object.values(rollCounts).filter(count => count >= numMultiples).length;
@@ -1687,7 +1713,7 @@ function evaluateDiceNotation(diceNotation) {
                 return resultValue;
             });
         }
-        console.log(expression)
+
         return eval(expression);
     }
 
@@ -1715,10 +1741,8 @@ function evaluateDiceNotation(diceNotation) {
     let breakdown = [];
 
     try {
-        console.log("MopsieNopsie Test" + JSON.stringify(variables) + modifiedInput)
         const evaluatedExpression = evaluateExpression(modifiedInput, variables);
         finalTotal = evaluatedExpression;
-        console.log(evaluatedExpression + "MOPSIENOPSIE")
     } catch (error) {
         console.log(error + "Error" + modifiedInput + JSON.stringify(variables));
         diceRollResult.textContent = 'Invalid dice notation or math expression.';
@@ -1773,6 +1797,7 @@ function summarizeRolls(rolls) {
     });
     return Object.entries(counts).map(([roll, count]) => `${roll}: ${count}`).join(', ');
 }
+
 function addRoll(skillName) {
     const diceNotation = prompt("Enter dice notation (e.g., 2d6 + 5):");
     if (diceNotation) {
