@@ -1365,11 +1365,6 @@ function diceLogic(skillCalled) {
     }
 
     // Updated regex to include all dice notations and modifiers
-    //const diceNotationRegex = /(\d+d\d+)([khld][hld]?\d+|[khld][><=]=?\d+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(m\d+)?(e[><=]=?\d+)?/g;
-    
-    //const diceNotationRegex = /(\d+d\d+)((?:[khld][><=]?\d+|[khld][hld]\d+|m\d+)+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(e[><=]=?\d+)?/g;
-    //const diceNotationRegex = /(\d+d\d+|\d+dF)((?:[khld][><=]?\d+|[khld][hld]\d+|m\d+)+)?(cs[><=]=?\d+)?(cf[><=]=?\d+)?(ccs[><=]=?\d+)?(ccf[><=]=?\d+)?(e[><=]=?\d+)?/g;
-    //const diceNotationRegex = /(\d*d\d+|\d+dF|[a-zA-Z_][a-zA-Z0-9_]*)([khld][><=]?(\d+)|[khld][hld]\d+|m\d+)?(cs[><=]?(\d+))?(cf[><=]?(\d+))?(ccs[><=]?(\d+))?(ccf[><=]?(\d+))?(e[><=]?(\d+))?/g;
     const diceNotationRegex = /(\d*d[a-zA-Z_][a-zA-Z0-9_]*|\d+dF|\d+d\d+)([khld][><=]?(\d+)|[khld][hld]\d+|m\d+)?(cs[><=]?(\d+))?(cf[><=]?(\d+))?(ccs[><=]?(\d+))?(ccf[><=]?(\d+))?(e[><=]?(\d+))?/g;
 
 
@@ -1481,14 +1476,17 @@ function diceLogic(skillCalled) {
             
         }
         console.log("Finished diceType: " + diceType);
+        const rolls = rollDice(numDiceParsed, diceType);
         // Roll the dice based on the numDiceParsed and diceType (custom, fudge, or numeric)
         if (initialDiceType !== diceType) {
             // Extract any modifiers after the initial dice type
             remainingModifiers = initialDiceType.replace(diceType, '');
             console.log("MODIF" + remainingModifiers)
-
+            const modifiedRolls = applyModifiers(rolls, remainingModifiers); // Apply modifiers to rolls TODO: This works but in the future just set modifiedrolls to a global value, this will make things way easier.
+            console.log(modifiedRolls + "Modified")
+            return modifiedRolls
         }
-        const rolls = rollDice(numDiceParsed, diceType);
+       
         
         return rolls;
     }
