@@ -1462,7 +1462,7 @@ function diceLogic(skillCalled) {
         // Step 1: Find the longest matching custom dice name
         let longestMatch = "";
         Object.keys(customDice).forEach(customName => {
-            if (diceType.includes(customName) && customName.length > longestMatch.length) {
+            if (initialDiceType.includes(customName) && customName.length > longestMatch.length) {
                 longestMatch = customName;
             }
         });
@@ -1750,8 +1750,9 @@ function diceLogic(skillCalled) {
     let breakdown = [];
 
     try {
+        console.log("Evaluatecheck start")
         const evaluatedExpression = evaluateExpression(modifiedInput, variables);
-        console.log("Evaluatecheck" + modifiedInput)
+        console.log("Evaluatecheck end: " + modifiedInput)
         finalTotal = evaluatedExpression;
     } catch (error) {
         console.log(error + "Error" + modifiedInput + JSON.stringify(variables));
