@@ -83,9 +83,10 @@ const notes = {
 let currentNoteType = '';
 let currentNoteItem = '';
 let currentNoteId = '';
-let lowest = ""
-let highest = ""
-let sortedRolls = ""
+let lowest = "";
+let highest = "";
+let sortedRolls = "";
+let modifiedRolls = "";
 const customDice = {
     c: [1, 1, 1, 6, 6, 6],
     ca: [0,0]
@@ -1354,6 +1355,8 @@ rollDiceForm.addEventListener('submit', (e) => {
 });
 
 function diceLogic(skillCalled) {
+    console.log("Emptied mod")
+    modifiedRolls = [];
     let diceInput = "";
     let resultValue = 0;
 
@@ -1482,9 +1485,9 @@ function diceLogic(skillCalled) {
             // Extract any modifiers after the initial dice type
             remainingModifiers = initialDiceType.replace(diceType, '');
             console.log("MODIF" + remainingModifiers)
-            const modifiedRolls = applyModifiers(rolls, remainingModifiers); // Apply modifiers to rolls TODO: This works but in the future just set modifiedrolls to a global value, this will make things way easier.
+            modifiedRolls = applyModifiers(rolls, remainingModifiers); // Apply modifiers to rolls TODO: This works but in the future just set modifiedrolls to a global value, this will make things way easier.
             console.log(modifiedRolls + "Modified")
-            return modifiedRolls
+            //return modifiedRolls //TODO: commet this out later, but make sure the modified rolls only gets cleared when you roll the dice, instead of after, since otherwise tis will get cleared.
         }
        
         
@@ -1495,8 +1498,8 @@ function diceLogic(skillCalled) {
 
     // Function to apply a single modifier and return the modified rolls
     function applySingleModifier(rolls, modifier) {
-        let modifiedRolls = [...rolls].sort((a, b) => a - b);
-        console.log("Modification set: " + modifier);
+        modifiedRolls = [...rolls].sort((a, b) => a - b);
+        console.log("Modified " + modifier + modifiedRolls);
 
         const match = modifier.match(/([khld])([><=]=?)(\d+)/);
         const matchOldStyle = modifier.match(/([khld])([hld])(\d+)/);
@@ -1543,8 +1546,9 @@ function diceLogic(skillCalled) {
     
         // Split the modifier string into individual modifiers
         const modifiers = modifierString.match(/([khld][><=]?\d+|[khld][hld]\d+|m\d+)/g);
-    
-        let modifiedRolls = [...rolls];
+        console.log("Modified: " + modifiedRolls);
+        modifiedRolls = [...rolls];
+        console.log("Modified: " + modifiedRolls);
         if (modifiers) {
             // Apply modifiers in the order they appear
             modifiers.forEach(modifier => {
@@ -1563,7 +1567,7 @@ function diceLogic(skillCalled) {
     }
     
     function applyMultiples(rolls, multipleModifier) {
-        let modifiedRolls = [...rolls];
+        modifiedRolls = [...rolls];
         const multipleMatch = multipleModifier.match(/m(\d+)/);
         
         if (multipleMatch) {
@@ -1578,6 +1582,7 @@ function diceLogic(skillCalled) {
     
             // Initialize total multiples counter and modified roll list
             let totalMultiples = 0;
+            console.log("Emptied mod")
             modifiedRolls = [];
     
             // Loop through each roll count and calculate how many multiples can be made
@@ -1608,6 +1613,7 @@ function diceLogic(skillCalled) {
 
     // Function to evaluate the entire expression
     function evaluateExpression(expression, variables) {
+        console.log("Modified: " + modifiedRolls);
         // Evaluate variable expressions first
         expression = expression.replace(variableRegex, (match, varName, varExpression) => {
             const value = evaluateExpression(varExpression, variables);
@@ -1623,14 +1629,14 @@ function diceLogic(skillCalled) {
             }
             return varValue;
         });
-
-        let modifiedRolls = [];
+        
         
 
         // Process dice notations one by one
         while (diceNotationRegex.test(expression)) {
             expression = expression.replace(diceNotationRegex, (match, diceNotation, modifier, successCriteria, failureCriteria, criticalSuccessCriteria, criticalFailureCriteria, multiples, exploding) => {
                 const rolls = evaluateDiceNotation(diceNotation);
+                console.log("Modified: " + modifiedRolls + "Rolls" + rolls);
                 let tempRolls = rolls;
 
                 // Apply all parts of the modifier
@@ -1708,7 +1714,7 @@ function diceLogic(skillCalled) {
                         resultValue = Object.values(rollCounts).filter(count => count >= numMultiples).length;
                     }
                 }
-                //tempRolls = modifiedRolls TODO: This makes all modified stuff be displayed correctly ecept for multiples which seem to break, probaly because modifiedrolls is set empty for them
+                tempRolls = modifiedRolls //TODO: This makes all modified stuff be displayed correctly ecept for multiples which seem to break, probaly because modifiedrolls is set empty for them
                 
                 //tempRolls = modifiedRolls
                 console.log("Kanus" + tempRolls)
