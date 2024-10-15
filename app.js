@@ -1541,6 +1541,7 @@ function diceLogic(skillCalled) {
         if (matchOldStyle) {
             const action = matchOldStyle[1] + matchOldStyle[2]; // 'kh', 'kl', 'dh', 'dl'
             const count = parseInt(matchOldStyle[3], 10);
+            modified = true
 
             switch (action) {
                 case 'kh': // Keep highest
@@ -1882,9 +1883,11 @@ function summarizeRolls(rolls) {
 }
 
 function addRoll(skillName) {
+    //TODO: the addroll button seems to be broken for now, should probably fix that.
     const diceNotation = prompt("Enter dice notation (e.g., 2d6 + 5):");
     if (diceNotation) {
-        const applyToAll = document.getElementById(`global-add-roll-${skillName}`).checked; //Bug when skill is cleared from skill list: Uncaught TypeError TypeError: Cannot read properties of null (reading 'checked')
+        console.log("Test 18")
+        const applyToAll = document.getElementById(`global-add-roll-${skillName}`).checked; //Bug when skill is cleared from skill list: Uncaught TypeError TypeError: Cannot read properties of null (reading 'checked') 
         if (applyToAll) {
             // Apply to all characters
             for (let character in characterSkills) {
