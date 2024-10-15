@@ -95,6 +95,7 @@ const customDice = {
 };
 let fullDiceNotation = ""
 let specialDice = ""
+let modified = ""
 
 // Folder data structure
 //const folders = [];
@@ -1361,6 +1362,7 @@ function diceLogic(skillCalled) {
     modifiedRolls = [];
     let diceInput = "";
     let resultValue = 0;
+    modified = false
 
     if (skillCalled === 'noSkill') {
         diceInput = document.getElementById('dice-input').value.trim();
@@ -1526,10 +1528,12 @@ function diceLogic(skillCalled) {
             switch (action) {
                 case 'k': // Keep
                     console.log("KEEPCHECK")
+                    modified = true
                     modifiedRolls = modifiedRolls.filter(roll => compare(roll, operator, value));
                     console.log(modifiedRolls)
                     break;
                 case 'd': // Discard
+                    modified = true
                     modifiedRolls = modifiedRolls.filter(roll => !compare(roll, operator, value));
                     break;
             }
@@ -1660,7 +1664,8 @@ function diceLogic(skillCalled) {
                 const rolls = evaluateDiceNotation(diceNotation);
                 console.log("Modified: " + modifiedRolls + "Rolls" + rolls);
                 let tempRolls = rolls; //TODO: The problem with the final being broken lays here, since for now 
-                if (modifiedRolls && modifiedRolls.length > 0) {
+                if (modified) {
+                    console.log("MODIFIED ATTEMPTED")
                     tempRolls = modifiedRolls; // If modifiedRolls contains anything, set tempRolls to modifiedRolls
                 }
 
@@ -1678,6 +1683,7 @@ function diceLogic(skillCalled) {
 
                 // Prepare result for success/failure checks
                 if (endsOnMultiple == false) {
+                    console.log(tempRolls + "TEMP")
                     resultValue = tempRolls.reduce((sum, roll) => sum + roll, 0);
                     console.log(resultValue + "Result")
                     
