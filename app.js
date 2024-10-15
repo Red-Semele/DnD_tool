@@ -93,6 +93,8 @@ const customDice = {
     // You can add more custom dice here
     // example: 'anotherdice': [value1, value2, ..., valueN]
 };
+let fullDiceNotation = ""
+let specialDice = ""
 
 // Folder data structure
 //const folders = [];
@@ -1440,11 +1442,16 @@ function diceLogic(skillCalled) {
     
     // Function to evaluate dice notation with modifiers
     function evaluateDiceNotation(diceNotation) {
+        //TODO: This merely returns "5dFk" upon entering "5dFk>3" Actually, it gives 1 letter too many, namely a k. But with fudge and custom dice if it would fully say it it would also work pretty well.
         console.log(diceNotation);
+        console.log("Full" + fullDiceNotation)
+        const firstPart = fullDiceNotation.split(" ")[0];
+        console.log(firstPart)
         
         // Regular expression to match number of dice and dice type (standard or custom)
-        const regex = /^(\d*)d(\d+|[a-zA-Z_][a-zA-Z0-9_]*)$/;
+        const regex = /^(\d*)d([\d><=a-zA-Z_][\d><=a-zA-Z0-9_]*)$/;
         const match = diceNotation.match(regex);
+        const matchSpecial = firstPart.match(regex) //TODO: This correctly sets the modifier. I need to keep the regualar dicenotation for the regular dice.
         
         if (!match) {
             throw new Error("Invalid dice notation");
@@ -1466,16 +1473,21 @@ function diceLogic(skillCalled) {
         });
         
         if (longestMatch) {
+            initialDiceType = matchSpecial[2]
             diceType = longestMatch; // Use the longest custom dice name
             console.log("Using custom dice: " + initialDiceType);
+            specialDice = true
         } else if (initialDiceType.includes('F')) {
+            initialDiceType = matchSpecial[2]
             diceType = 'F'; // Handle fudge dice separately
             console.log("Using fudge dice");
+            specialDice = true
         } else if (isNaN(initialDiceType)) {
             throw new Error(`Invalid dice type: ${diceType}`);
         } else {
             console.log("Using regular numeric dice: d" + diceType);
             diceType = initialDiceType
+            specialDice = false
             
         }
         console.log("Finished diceType: " + diceType);
@@ -1484,9 +1496,11 @@ function diceLogic(skillCalled) {
         if (initialDiceType !== diceType) {
             // Extract any modifiers after the initial dice type
             remainingModifiers = initialDiceType.replace(diceType, '');
-            console.log("MODIF" + remainingModifiers)
+            console.log("MODIF" + remainingModifiers) //TODO: For some reason "k" is seens as the remainignModifier, and not k>3
             modifiedRolls = applyModifiers(rolls, remainingModifiers); // Apply modifiers to rolls TODO: This works but in the future just set modifiedrolls to a global value, this will make things way easier.
-            console.log(modifiedRolls + "Modified")
+            const modSum = modifiedRolls.reduce((acc, curr) => acc + curr, 0)
+            fullDiceNotation = fullDiceNotation.replace(firstPart, modSum)
+            console.log(modifiedRolls + "Modified TEST fullDiceNotation expression" + modSum + fullDiceNotation)
             //return modifiedRolls //TODO: commet this out later, but make sure the modified rolls only gets cleared when you roll the dice, instead of after, since otherwise tis will get cleared.
         }
        
@@ -1511,7 +1525,9 @@ function diceLogic(skillCalled) {
 
             switch (action) {
                 case 'k': // Keep
+                    console.log("KEEPCHECK")
                     modifiedRolls = modifiedRolls.filter(roll => compare(roll, operator, value));
+                    console.log(modifiedRolls)
                     break;
                 case 'd': // Discard
                     modifiedRolls = modifiedRolls.filter(roll => !compare(roll, operator, value));
@@ -1550,6 +1566,7 @@ function diceLogic(skillCalled) {
         modifiedRolls = [...rolls];
         console.log("Modified: " + modifiedRolls);
         if (modifiers) {
+            console.log("modifier found!")
             // Apply modifiers in the order they appear
             modifiers.forEach(modifier => {
                 if (modifier.startsWith('m')) {
@@ -1557,6 +1574,7 @@ function diceLogic(skillCalled) {
                     modifiedRolls = applyMultiples(modifiedRolls, modifier);
                     console.log("Kane" + modifiedRolls + modifier + resultValue)
                 } else {
+                    console.log("modifier" + modifier)
                     // Apply keep/discard modifiers
                     modifiedRolls = applySingleModifier(modifiedRolls, modifier);
                 }
@@ -1596,6 +1614,7 @@ function diceLogic(skillCalled) {
                 }
             }
             resultValue = totalMultiples
+            console.log(resultValue + "Result")
             endsOnMultiple = true
             console.log("Roll counts: ", rollCounts);
             console.log("Total multiples that appear " + numMultiples + " or more times: " + totalMultiples);
@@ -1635,9 +1654,15 @@ function diceLogic(skillCalled) {
         // Process dice notations one by one
         while (diceNotationRegex.test(expression)) {
             expression = expression.replace(diceNotationRegex, (match, diceNotation, modifier, successCriteria, failureCriteria, criticalSuccessCriteria, criticalFailureCriteria, multiples, exploding) => {
+                console.log(expression + "EXPR")
+                fullDiceNotation = expression
+                console.log("fullDiceNotation" + fullDiceNotation)
                 const rolls = evaluateDiceNotation(diceNotation);
                 console.log("Modified: " + modifiedRolls + "Rolls" + rolls);
-                let tempRolls = rolls;
+                let tempRolls = rolls; //TODO: The problem with the final being broken lays here, since for now 
+                if (modifiedRolls && modifiedRolls.length > 0) {
+                    tempRolls = modifiedRolls; // If modifiedRolls contains anything, set tempRolls to modifiedRolls
+                }
 
                 // Apply all parts of the modifier
                 if (modifier) {
@@ -1654,6 +1679,8 @@ function diceLogic(skillCalled) {
                 // Prepare result for success/failure checks
                 if (endsOnMultiple == false) {
                     resultValue = tempRolls.reduce((sum, roll) => sum + roll, 0);
+                    console.log(resultValue + "Result")
+                    
                 }
                 // Handle success criteria
                 if (successCriteria) {
@@ -1662,6 +1689,7 @@ function diceLogic(skillCalled) {
                         const operator = successMatch[1];
                         const value = parseInt(successMatch[2], 10);
                         resultValue = tempRolls.filter(roll => compare(roll, operator, value)).length;
+                        console.log(resultValue + "Result")
                         modifiedRolls = tempRolls.filter(roll => compare(roll, operator, value));
                         console.log("Mod" + modifiedRolls)
                     }
@@ -1674,6 +1702,7 @@ function diceLogic(skillCalled) {
                         const operator = failureMatch[1];
                         const value = parseInt(failureMatch[2], 10);
                         resultValue = tempRolls.filter(roll => compare(roll, operator, value)).length;
+                        console.log(resultValue + "Result")
                         modifiedRolls = tempRolls.filter(roll => compare(roll, operator, value));
                     }
                 }
@@ -1685,6 +1714,7 @@ function diceLogic(skillCalled) {
                         const operator = criticalSuccessMatch[1];
                         const value = parseInt(criticalSuccessMatch[2], 10);
                         resultValue = tempRolls.filter(roll => compare(roll, operator, value)).length;
+                        console.log(resultValue + "Result")
                         modifiedRolls = tempRolls.filter(roll => compare(roll, operator, value));
                     }
                 }
@@ -1696,6 +1726,7 @@ function diceLogic(skillCalled) {
                         const operator = criticalFailureMatch[1];
                         const value = parseInt(criticalFailureMatch[2], 10);
                         resultValue = tempRolls.filter(roll => compare(roll, operator, value)).length;
+                        console.log(resultValue + "Result")
                         modifiedRolls = tempRolls.filter(roll => compare(roll, operator, value));
                         
                     }
@@ -1723,10 +1754,36 @@ function diceLogic(skillCalled) {
                 breakdown.push(detailedResult);
                 
                 console.log("Temp" + tempRolls)
+                console.log(resultValue + "Result")
                 return resultValue;
             });
         }
-
+        console.log(expression + "POO" + eval(expression) + "DICENOT " + fullDiceNotation)
+        if (expression != eval(expression)) {
+            console.log("SOMETHING IS WRONG. Fix that") //TODO: For things like 5d6 >3 this now doesn't trigger anymore since it thinks it's wrong. Try to fix that eventually.
+            
+            if (specialDice) {
+                console.log(fullDiceNotation + "AA" + eval(fullDiceNotation) + "TeST 22") //TODO: If the dicetype is just a regular dice, then try to not use the eval fulldicenotation since this would create problems.
+                if (fullDiceNotation == eval(fullDiceNotation)) {
+                    return eval(fullDiceNotation)
+                } else {
+                    if (Number.isInteger(eval(fullDiceNotation))) {
+                        console.log("Integer full not/")
+                        return eval(fullDiceNotation)
+                    
+                    } else {
+                        throw new Error('Problems with interpreter')
+                    }
+                        
+                }
+            } else if (Number.isInteger(eval(expression))) {
+                console.log("Integer expression")
+                return eval(expression)
+            } else {
+                throw new Error('Problems with interpreter')
+            }
+        }
+        
         return eval(expression);
     }
 
@@ -1759,10 +1816,15 @@ function diceLogic(skillCalled) {
         console.log("Evaluatecheck end: " + modifiedInput)
         finalTotal = evaluatedExpression;
     } catch (error) {
-        console.log(error + "Error" + modifiedInput + JSON.stringify(variables));
+        console.error("Error: " + error.message);
+        console.error("Stack Trace: " + error.stack);
+        console.log("Modified Input: " + modifiedInput);
+        console.log("Variables: " + JSON.stringify(variables));
+        
         diceRollResult.textContent = 'Invalid dice notation or math expression.';
         return;
     }
+    
 
     let finalResultMessage = `${breakdown.join(' | ')} => Total: ${finalTotal}`;
     const maxLength = 200;
