@@ -89,7 +89,7 @@ let sortedRolls = "";
 let modifiedRolls = "";
 const customDice = {
     c: [1, 1, 1, 6, 6, 6],
-    ca: [0,0]
+    ca: [1,2,3,4,5,6,7,8,9,1,20,12,13,14,15,16,17,18,19,20]
     // You can add more custom dice here
     // example: 'anotherdice': [value1, value2, ..., valueN]
 };
@@ -483,6 +483,20 @@ function updateCharacterDetails() {
     updateAchievementsDisplay(selectedCharacter)
     updateCharacterStatsDisplay(selectedCharacter);
     attachDragAndDropHandlers();
+    document.querySelectorAll('.Test').forEach(inputElement => {
+        console.log('Class of input:', inputElement.className);  // Log class names of each input
+        if (!inputElement.hasAttribute('data-dynamic-initialized')) {
+            console.log('Initializing DynamicInput for:', inputElement.className);
+    
+            // Initialize DynamicInput for this input element
+            new DynamicInput(inputElement);
+    
+            // Mark the input as initialized by adding a custom attribute
+            inputElement.setAttribute('data-dynamic-initialized', 'true');
+        } else {
+            console.log('Already initialized:', inputElement.className);
+        }
+    });
 }
 
 // Event Listeners
@@ -1054,7 +1068,7 @@ function generateInventoryItemHtml(item) {
     return `
          <li class="draggable" draggable="true" data-item-name="${item.name}">
             ${item.name.replace("'", "\\'")} (Slot: ${item.slot ? item.slot : 'No Slot'}, Stats: ${statHtml}, Rarity: ${item.rarity})
-            <input type="number" min="0" value="${item.quantity}" onchange="handleQuantityChange(event, '${item.name.replace("'", "\\'")}', '${item.id}')">
+            <input type="number" class="Test" value="${item.quantity}" onchange="handleQuantityChange(event, '${item.name.replace("'", "\\'")}', '${item.id}')">
             <button onclick="addNoteModalHandler('items', '${item.name.replace("'", "\\'")}', '${item.id}')">+</button>
             <button onclick="readNotesModalHandler('items', '${item.name.replace("'", "\\'")}', '${item.id}')">Read Notes</button>
             <button onclick="console.log('Clicked give item:', '${item.name.replace("'", "\\'")}'); giveItem('${item.name.replace("'", "\\'")}', '${item.id}')">Give item</button>
@@ -1357,7 +1371,7 @@ rollDiceForm.addEventListener('submit', (e) => {
   
 });
 
-function diceLogic(skillCalled) {
+function diceLogic(skillCalled, value) {
     console.log("Emptied mod")
     modifiedRolls = [];
     let diceInput = "";
@@ -1366,6 +1380,9 @@ function diceLogic(skillCalled) {
 
     if (skillCalled === 'noSkill') {
         diceInput = document.getElementById('dice-input').value.trim();
+    } else if (skillCalled === 'valueRoll') {
+        diceInput = value
+    
     } else {
         const skill = characterSkills[selectedCharacter].find(s => s.name === skillCalled);
         diceInput = skill.lastRoll;
@@ -1869,6 +1886,8 @@ function diceLogic(skillCalled) {
 
     if (skillCalled === 'noSkill') {
         diceRollResult.textContent = finalResultMessage;
+    }else if (skillCalled === 'valueRoll') {
+        return finalTotal
     } else {
         alert(`${skillCalled}: ` + finalResultMessage);
     }
@@ -2076,22 +2095,14 @@ function characterDetailRevealList(target) {
     }
 }
 
-function initializeCharacterStats(character) {
-    if (!characterStats[character]) {
-        characterStats[character] = {};
-        stats.forEach(stat => {
-            if (!(stat in characterStats[character])) {
-                characterStats[character][stat] = 0;
-            }
-        });
-    }
-}
+
 
 function initializeCharacterStats(character) {
     if (!characterStats[character]) {
         characterStats[character] = {};
         stats.forEach(stat => {
             if (!(stat in characterStats[character])) {
+                console.log("Set stat to zero")
                 characterStats[character][stat] = 0;
             }
         });
@@ -2130,26 +2141,41 @@ function updateCharacterStatsDisplay(character) {
     
     let statsHtml = '';
     stats.forEach(stat => {
-        console.log("Test3")
+        console.log("Test3" + characterStats[character][stat])
         let value = characterStats[character][stat];
+        console.log(value + "VALIDAE")
         statsHtml += generateStatItemHtml(stat, value);
     });
     
+    
     statsList.innerHTML = statsHtml ? `<ul>${statsHtml}</ul>` : 'No stats';
     console.log("No stats")
+
+    
 }
 
 function generateStatItemHtml(stat, value) {
     return `
         <li class="stat-item">
-            ${stat}: <input type="number" value="${value}" onchange="updateStat('${stat}', this.value)">
+            ${stat}: <input type="number" class="Test" value="${value}" onchange="updateStat('${stat}', this.value)">
         </li>`;
 }
 
 function updateStat(stat, value) {
     if (!selectedCharacter || !characterStats[selectedCharacter]) return;
-    console.log("Selected Char" + selectedCharacter)
-    characterStats[selectedCharacter][stat] = parseInt(value, 10);
+
+    console.log("Selected Char: " + selectedCharacter);
+    
+    // Check if the value is a valid number before updating the stat
+    if (!isNaN(value)) {
+        // Convert to number and update the stat
+        characterStats[selectedCharacter][stat] = parseInt(value, 10);
+    } else {
+        // Handle the "Roll:" case or non-numeric values (do nothing in this case)
+        console.log(`Skipping stat update. Value is not a number: ${value}`);
+    }
+    
+    // Redraw the character stats after updating
     updateCharacterStatsDisplay(selectedCharacter);
     saveGameState();
 }
@@ -2635,6 +2661,82 @@ function searchData() {
     resultsDiv.innerHTML = results ? results : '<p>No results found</p>';
     console.log(JSON.stringify(searchState.characterAchievements) + " Achievements." + JSON.stringify(searchState.characterTitles) + " Titles" + JSON.stringify(searchState.characterSkills) + " Skills.");
 }
+
+class DynamicInput {
+    constructor(inputElement) {
+      this.inputElement = inputElement;
+      this.init();
+    }
+  
+    init() {
+      this.inputElement.addEventListener('input', () => this.handleInput());
+      this.inputElement.addEventListener('keydown', (event) => this.handleKeydown(event));
+      this.inputElement.addEventListener('blur', () => this.handleDone());
+    }
+  
+    handleInput() {
+      const value = this.inputElement.value;
+  
+      // If the input value is a valid number, switch to 'number' input type
+      if (!isNaN(value) && value !== '') {
+        this.inputElement.type = 'number';
+        this.inputElement.setAttribute('step', '1'); // Optional: Set step value for number
+      } else {
+        // Otherwise, revert back to 'text' input type
+        console.log(JSON.stringify(this.inputElement.value) + " Babylon"); // Debug log
+        this.inputElement.type = 'text';
+      }
+    }
+  
+    handleKeydown(event) {
+      // Check if the pressed key is 'Enter'
+      if (event.key === 'Enter') {
+        event.preventDefault(); // Prevent default behavior (e.g., form submission)
+        this.handleDone();
+      }
+    }
+  
+    handleDone() {
+      let value = this.inputElement.value;
+  
+      // Logic for when input is considered 'done' (either on Enter key or blur)
+      console.log("Input done: ", value);
+      
+      if (value.startsWith("Roll:")) {
+        value = value.replace("Roll:", "").trim(); // Strip "Roll:" and remove leading/trailing spaces
+        const processedValue = diceLogic('valueRoll', value); // Process the roll
+        
+        // Directly set the processed value to the input element
+        this.inputElement.value = processedValue; 
+        console.log("Processed VALUE: " + processedValue); 
+  
+        // Trigger change event immediately
+        this.triggerOnChange(processedValue);
+      } else {
+        // Handle non-roll values directly
+        this.triggerOnChange(value);
+      }
+    }
+  
+    // Method to trigger onchange or any other functions that deal with numbers
+    triggerOnChange(value) {
+      // Update the input value
+      this.inputElement.value = value;
+  
+      // Create and dispatch a change event
+      const changeEvent = new Event('change');
+      this.inputElement.dispatchEvent(changeEvent);
+      
+      // Call any other functions that depend on the value being a number
+      console.log("Triggered onchange with value: " + this.inputElement.value);
+    }
+  }
+  
+  // Initialize dynamic input for #stat-value input field
+  const statInput = document.getElementById('stat-value');
+  new DynamicInput(statInput);
+  
+  
 
 
 
