@@ -2679,6 +2679,7 @@ class DynamicInput {
   
       // If the input value is a valid number, switch to 'number' input type
       if (!isNaN(value) && value !== '') {
+        console.log("NUMBER input detected, alert the authorities.")
         this.inputElement.type = 'number';
         this.inputElement.setAttribute('step', '1'); // Optional: Set step value for number
       } else {
@@ -2734,7 +2735,12 @@ class DynamicInput {
   
   // Initialize dynamic input for #stat-value input field
   const statInput = document.getElementById('stat-value');
+  const itemInput = document.getElementById('item-value');
+  const rarityInput = document.getElementById('item-rarity');
   new DynamicInput(statInput);
+  new DynamicInput(rarityInput); //TODO: This works perfectly now, maje sure to check it out later to add it to the others.
+  new DynamicInput(itemInput);
+  //new DynamicInput(statInput);
   
   
 
