@@ -136,6 +136,28 @@
             height: 200px; /* Set a fixed height or use min-height if needed */
             box-sizing: border-box; /* Include padding and border in the element’s total width and height */
         }
+        .scrollable-single {
+        max-height: 300px; /* Set maximum height for vertical scroll */
+        overflow-y: auto;
+    }
+
+        /* Scroll styling for Grid Roll Table */
+        .scrollable-grid {
+            max-height: 300px; /* Vertical scroll if content exceeds 300px */
+            max-width: 600px;  /* Horizontal scroll if content exceeds 600px */
+            overflow-y: auto;
+            overflow-x: auto;
+        }
+
+        /* Optional: Basic table styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            border: 1px solid #ddd;
+        }
         
     </style>
 </head>
@@ -176,6 +198,7 @@
         <details>
             <summary>Miscellaneous</summary>
             <a href="#" data-target="diceRoller">Roll dice</a>
+            <a href="#" data-target="rollTables">Roll tables</a>
             <a href="#" data-target="customNotes">Write notes</a>
             <a href="#" data-target="saveStuff">Save stuff</a>
             <a href="#" data-target="statAdd">Add stat</a>
@@ -189,6 +212,7 @@
             <h2>Add Character</h2>
             <form id="add-character-form">
                 <input type="text" id="character-name" placeholder="Character Name" required>
+                <input type="text" id="character-class" placeholder="Character group" required>
                 <button type="submit">Add Character</button>
             </form>
         </div>
@@ -198,6 +222,17 @@
             <form id="add-stat-form">
                 <input type="text" id="stat-name" class="dynamicInput" placeholder="Stat Name">
                 <input type="text" id="stat-value" class="dynamicInput" placeholder="Stat Value">
+                  <!-- New Category Dropdown -->
+                <select id="category-select" onchange="updateCharacterDropdown()">
+                    <option value="All">All categories</option>
+                    <!-- Options will be populated dynamically -->
+                </select>
+
+                <!-- New Character Dropdown -->
+                <select id="character-select">
+                    <option value="All">All Characters</option>
+                    <!-- Options will be populated dynamically based on selected category -->
+                </select>
                 <button id="add-stat-button">Add Stat</button>
             </form>
         </div>
@@ -290,7 +325,14 @@
         
         <div class="section" id="characterInfo">
             <h2>Character Details</h2>
+            <!-- Category dropdown to select character category -->
+            <select id="character-category-select">
+                <option value="All">All</option>
+            </select>
+            
+            <!-- Character dropdown based on selected category -->
             <select id="character-details-select" required></select>
+            
             <div id="character-details">
                 <h3 class="toggle-header" data-target="stat-list">Stats</h3>
                 <div id="stat-list" class="toggle-list"></div>
@@ -304,6 +346,7 @@
                 <div id="achievement-list" class="toggle-list"></div>
             </div>
         </div>
+        
 
         <div class="section" id="statGraph">
             <label for="modeGraphSelect">Check who's stats?</label>
@@ -401,6 +444,90 @@
             </form>
             <div id="dice-roll-result"></div>
         </div>
+        <div class="section" id="rollTables">
+            <h2>Customizable Roll Tables</h2>
+        
+            <!-- Table Selector for Loading Saved Tables -->
+            <label>
+                Select a Table:
+                <select id="saved-tables" onchange="loadTableFromDropdown()">
+                    <option value="">-- Select a Table --</option>
+                </select>
+            </label><br><br>
+        
+            <!-- New Table Form -->
+            <label>
+                Table Name:
+                <input type="text" id="table-name" placeholder="e.g., NPC Reaction Table">
+            </label><br><br>
+        
+            <label>
+                Table Type:
+                <select id="table-type" onchange="changeTableForm()">
+                    <option value="single">Single Dice Roll Table</option>
+                    <option value="grid">Two-Dice Grid Table</option>
+                </select>
+            </label><br><br>
+        
+            <!-- Dice Settings -->
+            <label>
+                Number of Dice:
+                <input type="number" id="num-dice" value="2" min="1">
+            </label><br><br>
+            <label>
+                Sides per Die:
+                <input type="number" id="sides-die" value="6" min="1">
+            </label><br><br>
+        
+            <!-- Single Roll Table Configuration -->
+            <div id="single-table-form" class="hidden">
+                <h3>Single Roll Table Setup</h3>
+                <button onclick="addSingleRow()">Add Row</button>
+                <div class="scrollable-single">
+                    <table id="single-roll-setup">
+                        <thead>
+                            <tr>
+                                <th>Roll Range (e.g., 2-4)</th>
+                                <th>Result Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rows will be added dynamically here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        
+            <!-- Grid Roll Table Configuration -->
+            <div id="grid-table-form" class="hidden">
+                <h3>Grid Table Setup</h3>
+                <button onclick="addGridRow()">Add Row</button>
+                <button onclick="addGridColumn()">Add Column</button>
+                <div class="scrollable-grid">
+                    <table id="grid-roll-setup">
+                        <thead>
+                            <tr id="column-headers">
+                                <th></th> <!-- Empty top-left cell for alignment -->
+                            </tr>
+                        </thead>
+                        <tbody id="grid-table-body">
+                            <!-- Rows will be dynamically generated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        
+            <!-- Create Table Button -->
+            <button onclick="createTable()">Create Table</button><br><br>
+        
+            <!-- Output Section for Tables -->
+            <div id="tables-output"></div>
+        
+            <!-- Roll Result Display Section -->
+            <div id="roll-result" class="roll-results"></div>
+        </div>
+        
         <div class= "section" id="saveStuff">
             <button onclick="eraseGameState()">Erase Save</button>
             <button onclick="checkVariables()">Export save</button>

@@ -150,7 +150,11 @@ function saveGameState() {
         characterFolders,
         selectedCharacter, 
         customFolders,
+        characterCategories,
+        charactersByCategory,
+        savedTables
     };
+    console.log(gameState, "PUGPUG")
     console.dir(notes, { depth: null });
     localStorage.setItem('gameState', JSON.stringify(gameState));
     localStorage.setItem('saves', JSON.stringify(saveFiles));
@@ -165,7 +169,8 @@ function saveGameState() {
 function loadGameState(importStyle) {
     console.log("Loaded save " + JSON.stringify(saveFiles) + "BRENT" + savedState + "BART" + savedSaves)
     if (importStyle !== 'imported') {
-        savedState = localStorage.getItem('gameState');
+        savedState = localStorage.getItem('gameState'); //TODO: This corectly saves the different classes
+        console.log(savedTables, "GREMLIN")
         savedSaves = localStorage.getItem('saves');
         console.log("LOADED, savedstate altered " + savedSaves)
     }
@@ -235,6 +240,9 @@ function loadGameState(importStyle) {
             if (gameState.hasOwnProperty(prop)) {
                 switch (prop) {
                     case 'characters':
+                    case 'characterCategories':
+                    case 'charactersByCategory':
+                    case 'savedTables':
                     case 'items':
                     case 'skills':
                     case 'inventory':
@@ -270,15 +278,18 @@ function loadGameState(importStyle) {
                 }
             }
         }
-
+        console.log("GREmlin", characterCategories, charactersByCategory) //TODO: right here this also still saves the categories.
         console.dir(notes, { depth: null });
         // Update UI or perform additional actions as needed
         updateCharacterSelects();
+        updateCharacterSelect();
         updateItemSelect();
         updateSkillSelect();
         updateAchievementSelect();
         updateTitleSelect();
         updateFoldersDisplay();
+        updateTableDropdown();
+        updateCategoryDropdown();
         if (selectedCharacter) {
             updateCharacterDetails();
         }
@@ -387,19 +398,29 @@ function addFolderItemHandler(folderName) {
     }
 }
 function updateCharacterSelects() {
-    console.log("A")
-    const characterOptions = characters.map(character => `<option value="${character}">${character}</option>`).join('');
+    console.log("A");
+
+    // Filter out any empty or falsy values from the characters array
+    const validCharacters = characters.filter(character => character.trim() !== '');
+    
+    // Generate the option HTML only for valid characters
+    const characterOptions = validCharacters.map(character => `<option value="${character}">${character}</option>`).join('');
+
+    // Update the dropdowns with the cleaned options
     assignCharacterSelect.innerHTML = characterOptions;
     loadoutCharacterSelect.innerHTML = characterOptions;
     assignSkillCharacterSelect.innerHTML = characterOptions;
     characterDetailsSelect.innerHTML = characterOptions;
     assignAchievementCharacterSelect.innerHTML = characterOptions;
     assignTitleCharacterSelect.innerHTML = characterOptions;
-    updateCharacterStatsSelect();
-    console.log(assignAchievementCharacterSelect)
-    console.log(assignTitleCharacterSelect)
 
+    // Update any other elements that need character options
+    updateCharacterStatsSelect();
+
+    console.log(assignAchievementCharacterSelect);
+    console.log(assignTitleCharacterSelect);
 }
+
 
 function updateItemSelect() {
     const selectElement = document.getElementById('assign-item');
@@ -500,27 +521,7 @@ function updateCharacterDetails() {
 }
 
 // Event Listeners
-addCharacterForm.addEventListener('submit', (e) => {
-    console.log("G")
-    e.preventDefault();
-    const characterName = document.getElementById('character-name').value;
-    if (!selectedCharacter) {
-        selectedCharacter = characterName
-    }
-    if (!characters.includes(characterName)) {
-        characters.push(characterName);
-        inventory[characterName] = [];
-        characterSkills[characterName] = [];
-        characterFolders[characterName] = [];
-        characterAchievements[characterName] = [];
-        characterTitles[characterName] = [];
-        initializeCharacterStats(characterName)
-        updateCharacterStatsSelect();
-        updateCharacterSelects();
-    }
-    addCharacterForm.reset();
-    saveGameState();
-});
+
 
 addItemForm.addEventListener('submit', (e) => {
     console.log("YES")
@@ -2098,21 +2099,27 @@ function characterDetailRevealList(target) {
 
 
 function initializeCharacterStats(character) {
+    console.log("pug 155 B")
     if (!characterStats[character]) {
+        console.log("pug155")
         characterStats[character] = {};
         stats.forEach(stat => {
             if (!(stat in characterStats[character])) {
-                console.log("Set stat to zero")
+                //TODO: I will slightly have to change this up, this is fantastic for when I want all characters to have a stat but I'd love to for example to be able to give only pc's certain stats etc.
                 characterStats[character][stat] = 0;
             }
         });
+    } else {
+        console.log(characterStats[character], "pug 155 A")
     }
 }
 
 function addStatHandler() {
     const statName = document.getElementById('stat-name').value.trim();
     let statValue = parseInt(document.getElementById('stat-value').value.trim(), 10);
-    
+    const category = document.getElementById('category-select').value;
+    const selectedCharacter = document.getElementById('character-select').value;
+
     if (!statName || isNaN(statValue)) return;
     
     if (stats.includes(statName)) {
@@ -2120,39 +2127,55 @@ function addStatHandler() {
         return;
     }
     
+    // Add stat to global stats if not already there
     stats.push(statName);
-    for (let character in characterStats) {
-        characterStats[character][statName] = 0;
-    }
-    
-    initializeCharacterStats(selectedCharacter);
-    characterStats[selectedCharacter][statName] = statValue;
-    
-    updateCharacterStatsDisplay(selectedCharacter);
-    updateCharacterStatsSelect()
+
+    // Determine characters to add the stat to
+    const charactersToUpdate = selectedCharacter === 'All' 
+        ? charactersByCategory[category] 
+        : [selectedCharacter];
+
+    // Initialize stat for each character in the selected category
+    charactersToUpdate.forEach(character => {
+        if (!characterStats[character]) {
+            characterStats[character] = {};
+        }
+        characterStats[character][statName] = statValue;
+        console.log(character + "156")
+    });
+
+    updateCharacterStatsDisplay(selectedCharacter === 'All' ? null : selectedCharacter);
+    updateCharacterStatsSelect();
     saveGameState();
 }
-
 function updateCharacterStatsDisplay(character) {
-    console.log("Test1")
+    console.log("Test1");
     if (!character) return;
-    console.log("Test2")
-    initializeCharacterStats(character);
+    console.log("Test2");
     
-    let statsHtml = '';
-    stats.forEach(stat => {
-        console.log("Test3" + characterStats[character][stat])
-        let value = characterStats[character][stat];
-        console.log(value + "VALIDAE")
-        statsHtml += generateStatItemHtml(stat, value);
-    });
-    
-    
-    statsList.innerHTML = statsHtml ? `<ul>${statsHtml}</ul>` : 'No stats';
-    console.log("No stats")
+    initializeCharacterStats(character); // Initialize any necessary stats
 
-    
+    let statsHtml = '';
+
+    // Only iterate over the stats that are defined for the specific character
+    const characterDefinedStats = Object.keys(characterStats[character]);
+
+    characterDefinedStats.forEach(stat => {
+        console.log("Checking stat:", stat, "for character:", character);
+        const value = characterStats[character][stat];
+        
+        // Ensure the stat is initialized and valid for this character
+        if (value !== undefined) {
+            console.log(value + " VALIDATED for character");
+            statsHtml += generateStatItemHtml(stat, value);
+        }
+    });
+
+    // Display the stats in the UI or show 'No stats' if none are present
+    statsList.innerHTML = statsHtml ? `<ul>${statsHtml}</ul>` : 'No stats';
+    console.log("Stats updated for character:", character);
 }
+
 
 function generateStatItemHtml(stat, value) {
     return `
@@ -2232,27 +2255,34 @@ function getNextColor() {
   function updateCharacterStatsSelect() {
     const selectElement = document.getElementById('statGraphSelect');
     const selectElement2 = document.getElementById('characterGraphSelect');
-    selectElement.textContent = ''; // Clear existing options
+    
+    // Clear existing options
+    selectElement.textContent = '';
+    selectElement2.textContent = '';
 
-    stats.forEach(stat => {
+    // Filter out empty or whitespace-only values from stats and characters
+    const validStats = stats.filter(stat => stat.trim() !== '');
+    const validCharacters = characters.filter(character => character.trim() !== '');
+
+    // Populate stats dropdown
+    validStats.forEach(stat => {
         const option = document.createElement('option');
-        console.log(stat)
         option.value = stat;
         option.textContent = stat;
         selectElement.appendChild(option);
-        console.log("Stat assigned")
+        console.log("Stat assigned");
     });
 
-    characters.forEach(character => {
+    // Populate characters dropdown
+    validCharacters.forEach(character => {
         const option = document.createElement('option');
-        console.log(character)
         option.value = character;
         option.textContent = character;
         selectElement2.appendChild(option);
-        console.log("Name assigned")
+        console.log("Name assigned");
     });
+}
 
-  }
 
   function logAllNotes() {
     console.log('Logging all notes:');
@@ -2740,11 +2770,390 @@ class DynamicInput {
   new DynamicInput(statInput);
   new DynamicInput(rarityInput); //TODO: This works perfectly now, maje sure to check it out later to add it to the others.
   new DynamicInput(itemInput);
-  //new DynamicInput(statInput);
+  let singleRollTable = [];
+  let gridRollTable = [];
+  let savedTables = {}; // Object to store saved tables
   
+  // Toggle form based on table type
+  function changeTableForm() {
+      const tableType = document.getElementById("table-type").value;
+      document.getElementById("single-table-form").classList.toggle("hidden", tableType !== "single");
+      document.getElementById("grid-table-form").classList.toggle("hidden", tableType !== "grid");
+  }
+  
+  // Add a row for the single-roll table configuration
+  function addSingleRow() {
+      const tableBody = document.getElementById("single-roll-setup").getElementsByTagName("tbody")[0];
+      const row = tableBody.insertRow();
+  
+      const rollRangeCell = row.insertCell(0);
+      rollRangeCell.innerHTML = '<input type="text" placeholder="e.g., 2-4">';
+  
+      const resultCell = row.insertCell(1);
+      resultCell.innerHTML = '<input type="text" placeholder="Result description">';
+  
+      const actionCell = row.insertCell(2);
+      actionCell.innerHTML = '<button onclick="removeRow(this)">Remove</button>';
+  }
+  
+  // Add a row for the grid table configuration
+  function addGridRow() {
+      const tableBody = document.getElementById("grid-table-body");
+      const row = tableBody.insertRow();
+  
+      const rowLabelCell = row.insertCell(0);
+      rowLabelCell.innerHTML = '<input type="text" placeholder="Row Range (e.g., 2-4)" class="row-roll-requirement">';
+  
+      Array.from(document.querySelectorAll("#column-headers th")).slice(1).forEach(() => {
+          const cell = row.insertCell();
+          cell.innerHTML = '<input type="text" placeholder="Result description" class="result-description">';
+      });
+  }
+  
+  // Add a column for the grid table configuration
+  function addGridColumn() {
+      const headerRow = document.getElementById("column-headers");
+      const headerCell = document.createElement("th");
+      headerCell.innerHTML = '<input type="text" placeholder="Column Range (e.g., 2-4)" class="column-roll-requirement">';
+      headerRow.appendChild(headerCell);
+  
+      const rows = document.getElementById("grid-table-body").getElementsByTagName("tr");
+      Array.from(rows).forEach(row => {
+          const cell = row.insertCell();
+          cell.innerHTML = '<input type="text" placeholder="Result description" class="result-description">';
+      });
+  }
+  
+  // Remove a row from either table setup
+  function removeRow(button) {
+      const row = button.parentElement.parentElement;
+      row.remove();
+  }
+  
+  // Create the table data based on user inputs
+  function createTable() {
+      const tableType = document.getElementById("table-type").value;
+      const tableName = document.getElementById("table-name").value;
+  
+      if (tableType === "single") {
+          singleRollTable = [];
+          const rows = document.querySelectorAll("#single-roll-setup tbody tr");
+          rows.forEach(row => {
+              const rollRange = row.cells[0].getElementsByTagName("input")[0].value;
+              const description = row.cells[1].getElementsByTagName("input")[0].value;
+              singleRollTable.push({ rollRange, description });
+          });
+          saveTable(tableName, "single", singleRollTable);
+      } else {
+          gridRollTable = [];
+          const rowRequirements = Array.from(document.querySelectorAll(".row-roll-requirement")).map(input => input.value);
+          const columnRequirements = Array.from(document.querySelectorAll(".column-roll-requirement")).map(input => input.value);
+  
+          const rows = document.getElementById("grid-table-body").getElementsByTagName("tr");
+          Array.from(rows).forEach((row, rowIndex) => {
+              const cells = row.getElementsByClassName("result-description");
+              Array.from(cells).forEach((cell, colIndex) => {
+                  const description = cell.value;
+                  gridRollTable.push({
+                      rowRange: rowRequirements[rowIndex],
+                      columnRange: columnRequirements[colIndex],
+                      description
+                  });
+              });
+          });
+          saveTable(tableName, "grid", gridRollTable);
+      }
+  }
+  
+  // Save the table to savedTables object and update the dropdown
+  function saveTable(tableName, tableType, tableData) {
+      savedTables[tableName] = { tableType, tableData };
+      updateTableDropdown();
+      saveGameState()
+  }
+  
+  // Update the table dropdown with saved tables
+  function updateTableDropdown() {
+      const dropdown = document.getElementById("saved-tables");
+      dropdown.innerHTML = '<option value="">-- Select a Table --</option>';
+      Object.keys(savedTables).forEach(name => {
+          const option = document.createElement("option");
+          option.value = name;
+          option.textContent = name;
+          dropdown.appendChild(option);
+      });
+  }
+  
+ // Load and display a saved table
+function loadTableFromDropdown() {
+    const tableName = document.getElementById("saved-tables").value;
+    if (!tableName) return;
+    
+    // Get the saved table from the object
+    const table = savedTables[tableName];
+    
+    // Add the loaded table to the correct array based on its type
+    if (table.tableType === "single") {
+        // Add the single-roll table to the global array
+        singleRollTable = table.tableData;
+        console.log(table.tableData, "156")
+    } else if (table.tableType === "grid") {
+        // Add the grid-roll table to the global array
+        gridRollTable = table.tableData;
+        console.log(table.tableData, "156")
+    }
+    
+    // Display the loaded table
+    displayTable(table.tableData, tableName, table.tableType);
+}
+
+// Display the created table and add a roll button
+function displayTable(tableData, tableName, tableType) {
+    let outputHtml = `<h3>${tableName}</h3><button onclick="rollTable('${tableType}')">Roll</button><table><thead><tr><th></th>`;
+
+    if (tableType === "grid") {
+        // Dynamically generate column headers based on saved data
+        const columnRanges = tableData.map(row => row.columnRange).filter((value, index, self) => self.indexOf(value) === index); // Unique column ranges
+        
+        // Add column headers to the table
+        columnRanges.forEach(colRange => {
+            outputHtml += `<th>${colRange}</th>`;
+        });
+
+        outputHtml += `</tr></thead><tbody>`;
+
+        // Dynamically generate rows based on saved data
+        const rowRanges = tableData.map(row => row.rowRange).filter((value, index, self) => self.indexOf(value) === index); // Unique row ranges
+        
+        // Add rows to the table
+        rowRanges.forEach(rowRange => {
+            outputHtml += `<tr><th>${rowRange}</th>`;
+            
+            // Add cells to the row based on column ranges
+            columnRanges.forEach(colRange => {
+                const resultCell = tableData.find(cell => cell.rowRange === rowRange && cell.columnRange === colRange);
+                outputHtml += `<td>${resultCell ? resultCell.description : ''}</td>`;
+            });
+            outputHtml += `</tr>`;
+        });
+
+        outputHtml += `</tbody></table>`;
+    } else {
+        // Regular table rendering for non-grid tables
+        outputHtml += `<tr><th>Roll Range</th><th>Result Description</th></tr>`;
+        tableData.forEach(row => {
+            outputHtml += `<tr><td>${row.rollRange}</td><td>${row.description}</td></tr>`;
+        });
+        outputHtml += `</table>`;
+    }
+
+    // Display the generated HTML in the page
+    document.getElementById("tables-output").innerHTML = outputHtml;
+}
+
+
+  
+  // Roll table based on single or grid type
+  function rollTable(tableType) {
+      let resultText = "Result: ";
+      const numDice = parseInt(document.getElementById("num-dice").value);
+      const sidesDie = parseInt(document.getElementById("sides-die").value);
+  
+      if (tableType === "single") {
+          const roll = rollDice(numDice, sidesDie);
+          const result = singleRollTable.find(row => {
+              const [min, max] = row.rollRange.split("-").map(Number);
+              return roll >= min && roll <= max;
+          });
+          resultText = `Roll: ${roll} — ` + (result ? result.description : "No matching result");
+      } else {
+          const roll1 = rollDice(1, sidesDie);
+          const roll2 = rollDice(1, sidesDie);
+          const result = gridRollTable.find(row => 
+              isRollInRange(roll1, row.rowRange) && isRollInRange(roll2, row.columnRange)
+          );
+          resultText = `Rolls: ${roll1} and ${roll2} — ` + (result ? result.description : "No matching result");
+      }
+  
+      document.getElementById("roll-result").innerText = resultText;
+  }
+  
+  // Roll dice function
+  function rollDice(num, sides) {
+      let total = 0;
+      for (let i = 0; i < num; i++) {
+          total += Math.floor(Math.random() * sides) + 1;
+      }
+      return total;
+  }
+  
+  // Helper function to check if a roll falls within a given range
+  function isRollInRange(roll, range) {
+      const [min, max] = range.split('-').map(Number);
+      return roll >= min && roll <= max;
+  }
+  
+
   
 
 
 
+// Initialize data structures
+
+let characterCategories = new Set(['All']); // Track unique categories
+let charactersByCategory = { 'All': [] }; // Map categories to character names
 
 
+// Event Listeners
+addCharacterForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    const characterName = document.getElementById('character-name').value;
+    const characterCategory = document.getElementById('character-class').value || 'Unknown';
+    console.log("PUGAROONIE" + characterCategory + "ee" + characterName)
+
+    if (!selectedCharacter) {
+        selectedCharacter = characterName;
+    }
+
+    if (!characters.includes(characterName)) {
+        characters.push(characterName);
+
+        // Add character to respective category
+        if (!charactersByCategory[characterCategory]) {
+            charactersByCategory[characterCategory] = [];
+            characterCategories.add(characterCategory);
+        }
+        charactersByCategory[characterCategory].push(characterName);
+        charactersByCategory['All'].push(characterName);
+
+        // Initialize character data
+        inventory[characterName] = [];
+        characterSkills[characterName] = [];
+        characterFolders[characterName] = [];
+        characterAchievements[characterName] = [];
+        characterTitles[characterName] = [];
+        initializeCharacterStats(characterName);
+        
+        // Update category and character dropdowns
+        updateCategoryDropdown();
+        updateCharacterSelect();
+    }
+    
+    addCharacterForm.reset();
+    saveGameState();
+});
+
+addCharacterForm.addEventListener('submit', (e) => {
+    console.log("G")
+    e.preventDefault();
+    const characterName = document.getElementById('character-name').value;
+    if (!selectedCharacter) {
+        selectedCharacter = characterName
+    }
+    if (!characters.includes(characterName)) {
+        characters.push(characterName);
+        inventory[characterName] = [];
+        characterSkills[characterName] = [];
+        characterFolders[characterName] = [];
+        characterAchievements[characterName] = [];
+        characterTitles[characterName] = [];
+        initializeCharacterStats(characterName)
+        updateCharacterStatsSelect();
+        updateCharacterSelects();
+    }
+    addCharacterForm.reset();
+    saveGameState();
+}); //TODO merge this with the above one.
+// Function to update category dropdown
+function updateCategoryDropdown() {
+    console.log("GREmlin", charactersByCategory); 
+    const categorySelect = document.getElementById('character-category-select');
+    categorySelect.innerHTML = ''; // Clear existing options
+
+    // Loop through the keys in charactersByCategory to populate the dropdown
+    for (let category in charactersByCategory) {
+        if (charactersByCategory.hasOwnProperty(category)) {
+            const option = document.createElement('option');
+            console.log(category + " CATEGO"); // Debug log
+            option.value = category;
+            option.textContent = category;
+            categorySelect.appendChild(option);
+        }
+    }
+}
+
+
+// Function to update character dropdown based on selected category
+function updateCharacterSelect() {
+    const categorySelect = document.getElementById('character-category-select').value;
+    const characterSelect = document.getElementById('character-details-select');
+    characterSelect.innerHTML = '';
+
+    const charactersToShow = charactersByCategory[categorySelect] || [];
+    charactersToShow.forEach(character => {
+        const option = document.createElement('option');
+        option.value = character;
+        option.textContent = character;
+        characterSelect.appendChild(option);
+    });
+    console.log("POOOG", characterSelect.value)
+    selectedCharacter = characterSelect.value
+    updateCharacterStatsDisplay(selectedCharacter)
+    updateInventoryDisplay(selectedCharacter);
+    updateSkillsDisplay(selectedCharacter);
+    updateTitlesDisplay(selectedCharacter) 
+    updateAchievementsDisplay(selectedCharacter)
+}
+
+// Event listener to filter characters based on category
+document.getElementById('character-category-select').addEventListener('change', updateCharacterSelect);
+
+function updateCategoryDropdown() {
+    const categorySelect = document.getElementById('category-select');
+    const categorySelect2 = document.getElementById('character-category-select');
+    categorySelect.innerHTML = ''; // Clear existing options
+    categorySelect2.innerHTML = ''; // Clear existing options
+
+    for (let category in charactersByCategory) {
+        if (charactersByCategory.hasOwnProperty(category)) {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            categorySelect.appendChild(option);
+            categorySelect2.appendChild(option);
+        }
+    }
+
+    updateCharacterDropdown(); // Populate character dropdown based on selected category
+}
+
+// Populate character dropdown based on selected category
+function updateCharacterDropdown() {
+    const categorySelect = document.getElementById('category-select').value;
+    const characterSelect = document.getElementById('character-select');
+    characterSelect.innerHTML = ''; // Clear existing options
+
+    const characters = charactersByCategory[categorySelect] || [];
+    const allOption = document.createElement('option');
+    allOption.value = 'All';
+    allOption.textContent = 'All Characters';
+    characterSelect.appendChild(allOption);
+
+    characters.forEach(character => {
+        if (character.trim() !== '') { // Skip empty character names
+            const option = document.createElement('option');
+            option.value = character;
+            option.textContent = character;
+            characterSelect.appendChild(option);
+        }
+    });
+}
+
+
+
+  //TODO: Clear some of the redundant/double functions.
+  //TODO: Make the rolling of tables work decently after reloading.
+
+
+  
