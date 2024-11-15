@@ -105,6 +105,8 @@ document.getElementById('achievement-list').style.display = "none";
 document.getElementById('inventory-list').style.display = "none";
 document.getElementById('skills-list').style.display = "none";
 document.getElementById('variableChecker').style.display = "none"
+document.getElementById('single-table-form').style.display = "none";
+document.getElementById('grid-table-form').style.display = "none"
 document.getElementById('add-stat-button').addEventListener('click', addStatHandler);
 document.addEventListener('DOMContentLoaded', loadGameState);
 const ctx = document.getElementById('myChart');
@@ -2777,6 +2779,16 @@ class DynamicInput {
   // Toggle form based on table type
   function changeTableForm() {
       const tableType = document.getElementById("table-type").value;
+      console.log(tableType, "TABLE")
+
+      if (tableType === "single") {
+             document.getElementById('single-table-form').style.display = "block";
+            document.getElementById('grid-table-form').style.display = "none"
+      } else if (tableType === "grid") {
+             document.getElementById('single-table-form').style.display = "none";
+            document.getElementById('grid-table-form').style.display = "block";
+      }
+      
       document.getElementById("single-table-form").classList.toggle("hidden", tableType !== "single");
       document.getElementById("grid-table-form").classList.toggle("hidden", tableType !== "grid");
   }
@@ -2904,8 +2916,37 @@ function loadTableFromDropdown() {
     }
     
     // Display the loaded table
+    document.getElementById('tables-output').style.display = "block"
+    document.getElementById('roll-result').style.display = "block"
     displayTable(table.tableData, tableName, table.tableType);
 }
+
+function removeTableFromDropdown() {
+    // Get the selected table name from the dropdown
+    const tableName = document.getElementById("saved-tables").value;
+    
+  
+    // Check if the table exists in savedTables
+    if (savedTables[tableName]) {
+      // Delete the table from savedTables
+      delete savedTables[tableName];
+  
+      // Update the dropdown to reflect the removed table
+      updateTableDropdown();
+  
+      // Save the updated game state
+      saveGameState();
+  
+      console.log(`Table "${tableName}" has been removed.`);
+    } else {
+      console.log(`Table "${tableName}" does not exist.`);
+    }
+    document.getElementById('single-table-form').style.display = "none";
+    document.getElementById('grid-table-form').style.display = "none"
+    document.getElementById('tables-output').style.display = "none"
+    document.getElementById('roll-result').style.display = "none"
+  }
+  
 
 // Display the created table and add a roll button
 function displayTable(tableData, tableName, tableType) {
@@ -2967,8 +3008,8 @@ function displayTable(tableData, tableName, tableType) {
           });
           resultText = `Roll: ${roll} — ` + (result ? result.description : "No matching result");
       } else {
-          const roll1 = rollDice(1, sidesDie);
-          const roll2 = rollDice(1, sidesDie);
+          const roll1 = rollDice(numDice, sidesDie);
+          const roll2 = rollDice(numDice, sidesDie);
           const result = gridRollTable.find(row => 
               isRollInRange(roll1, row.rowRange) && isRollInRange(roll2, row.columnRange)
           );
@@ -2978,7 +3019,7 @@ function displayTable(tableData, tableName, tableType) {
       document.getElementById("roll-result").innerText = resultText;
   }
   
-  // Roll dice function
+  // Roll dice function TODO: Replace this with my universal diceroll logic later.
   function rollDice(num, sides) {
       let total = 0;
       for (let i = 0; i < num; i++) {
